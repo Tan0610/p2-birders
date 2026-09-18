@@ -4,6 +4,7 @@ import { JOURNAL_TOPIC_HEX, JOURNAL_TOPIC_STRING } from '@deccan-birders/format'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { describe, expect, it } from 'vitest';
 import { feedIdentifier, socAddress } from '../apps/reader/src/swarm/feed';
+import { contentAddress, recoverFeedSigner } from '../apps/reader/src/swarm/verify';
 
 // Cross-checks the reader's hand-written feed maths against bee-js, the library
 // Swarm ID uses to write the feed. If these ever disagree, the reader would
@@ -26,5 +27,29 @@ describe('reader feed maths agrees with bee-js 11', () => {
     const id = feedIdentifier(hexToBytes(JOURNAL_TOPIC_HEX), BigInt(i));
     expect(bytesToHex(id)).toBe(expectedId.toHex());
     expect(bytesToHex(socAddress(id, hexToBytes(owner)))).toBe(expectedSoc.toHex());
+  });
+});
+
+describe('reader signature check agrees with bee-js 11', () => {
+  const { makeContentAddressedChunk } = require(join(beeRoot, 'chunk/cac.js'));
+
+  it('computes the same content address (BMT) for a 40-byte pointer payload', () => {
+    const payload = new Uint8Array(40).map((_, i) => i * 7);
+    const cac = makeContentAddressedChunk(payload);
+    const span = cac.data.subarray(0, 8);
+    expect(bytesToHex(contentAddress(span, payload))).toBe(cac.address.toHex());
+  });
+
+  it('recovers the feed owner from a feed update signed by bee-js', () => {
+    // A fresh throwaway key per run, so no key material ever sits in the repository.
+    const key = new bee.PrivateKey(crypto.getRandomValues(new Uint8Array(32)));
+    const identifier = feedIdentifier(hexToBytes(JOURNAL_TOPIC_HEX), 3n);
+    const soc = makeContentAddressedChunk(new Uint8Array(40).fill(9)).toSingleOwnerChunk(identifier, key);
+    expect(recoverFeedSigner(soc.data)).toBe(key.publicKey().address().toHex());
+  });
+
+  it('does not attribute an unsigned chunk to anyone', () => {
+    const chunk = new Uint8Array(145);
+    expect(recoverFeedSigner(chunk)).toBeNull();
   });
 });
