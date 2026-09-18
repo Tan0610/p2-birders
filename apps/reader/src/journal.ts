@@ -43,7 +43,7 @@ export async function loadJournalByOwner(base: string, owner: string, hint?: big
   const ownerRaw = ownerBytes(owner);
   const update = await resolveLatest(base, hexToBytes(JOURNAL_TOPIC_HEX), ownerRaw, hint, signal);
   if (!update) {
-    throw new ReaderError('EMPTY_JOURNAL', 'This journal address has not published any sightings yet.');
+    throw new ReaderError('EMPTY_JOURNAL', 'No journal edition has been published at this address: feed update 0 does not exist on this gateway.');
   }
   const loaded = await loadJournalByRef(base, update.journalRef, signal);
   const warnings: string[] = [];
