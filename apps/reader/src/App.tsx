@@ -193,6 +193,12 @@ function Landing(props: { gateway: string; onGateway: (g: string) => void; onOpe
             Every Deccan Birders member has a journal address. Paste one here and Almanac finds their latest list of sightings on Swarm, then
             fetches each record and photo. No account, no app of theirs needed.
           </p>
+          <div className="clutch" aria-hidden="true">
+            {['3f9a1c07', 'b27e40d5', '0dd5a86e'].map((seed, i) => (
+              <EggMark key={seed} address={seed.repeat(5)} size={i === 1 ? 62 : 46} />
+            ))}
+            <p className="clutch-note">every journal address hatches its own egg</p>
+          </div>
         </div>
       )}
       {props.again && <h2 id="landing-title">Try another address</h2>}
