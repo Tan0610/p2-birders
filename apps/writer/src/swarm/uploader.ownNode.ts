@@ -6,6 +6,9 @@ import type { UploadRoute } from './routes';
  * The own-node branch. This is the ONLY file allowed to pass pin or tag:
  * it only ever talks to the user's own Bee node (never the public gateway),
  * where pinning keeps a local copy and a tag lets the node report sync progress.
+ *
+ * Capability gate: uploadBytesToOwnNode is only called from uploader.ts after
+ * gate() has confirmed the node is reachable with a usable batch.
  */
 
 type OwnNodeRoute = Extract<UploadRoute, { kind: 'own-node' }>;

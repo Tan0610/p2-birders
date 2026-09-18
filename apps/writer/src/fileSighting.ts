@@ -118,7 +118,9 @@ export async function publishJournal(
   onStep: StepListener,
 ): Promise<{ journalRef: string; feedIndex: string; owner: string; socAddress: string }> {
   onStep('journal', 'active');
-  const owner = await failStep(onStep, 'journal', () => client.makeSequentialFeedWriter({ topic: JOURNAL_TOPIC_HEX }).getOwner());
+  // The owner is resolved through a feed *reader* (read-only, no upload). The only
+  // feed writer in this app lives in uploader.swarmId.ts, behind the capability gate.
+  const owner = await failStep(onStep, 'journal', () => client.makeSequentialFeedReader({ topic: JOURNAL_TOPIC_HEX }).getOwner());
   let latest = await failStep(onStep, 'journal', () => readLatestJournal(client, owner));
 
   // What this device last published is only used to notice a stale read,
@@ -150,6 +152,13 @@ export async function publishJournal(
 }
 
 export async function retryJournal(client: SwarmIdClient, route: UploadRoute, onStep: StepListener) {
+  // Same rule as a fresh filing: check first, and stop before reading or writing if the answer is no.
+  // (Every uploader method checks again right before its own upload.)
+  const capability = await checkUploadCapability(client, route);
+  if (!capability.ok) {
+    onStep('journal', 'failed');
+    throw capability.failure;
+  }
   return publishJournal(client, createUploader(client, route), onStep);
 }
 

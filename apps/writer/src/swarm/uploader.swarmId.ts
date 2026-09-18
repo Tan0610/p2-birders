@@ -6,6 +6,10 @@ import { JOURNAL_TOPIC_HEX } from '@deccan-birders/format';
  * subsidised gateway, whose CORS allow-list refuses the Swarm-Pin and
  * Swarm-Tag headers (the browser reports only "Failed to fetch"). So this
  * file never passes pin or tag, and the option type makes it impossible to.
+ *
+ * Capability gate: these functions are only ever called from uploader.ts, and
+ * only after its gate() (checkUploadCapability) has said yes. ESLint and
+ * scripts/audit-checks.mjs fail the build if anything else imports them.
  */
 export type GatewaySafeUploadOptions = Omit<UploadOptions, 'pin' | 'tag'> & { pin?: never; tag?: never };
 
