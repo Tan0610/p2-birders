@@ -141,12 +141,28 @@ npm run check          # all of the above
 
 ## Deploying
 
-Both apps are static sites (`apps/*/dist`). For Vercel, create two projects from this repository:
+Both apps are static sites (`apps/*/dist`). For Vercel, create **two projects from the same
+repository**. Each app's `vercel.json` already holds these values, so importing the repo and
+setting only the Root Directory is enough; the table is what the dashboard should end up showing.
 
-| Project | Root directory | Build command | Output | Environment |
-|---|---|---|---|---|
-| Field Journal | `apps/writer` | `cd ../.. && npm run build -w @deccan-birders/writer` | `dist` | `VITE_READER_URL=<Almanac URL>` |
-| Almanac | `apps/reader` | `cd ../.. && npm run build -w @deccan-birders/reader` | `dist` | none needed |
+| Setting | Field Journal | Almanac |
+|---|---|---|
+| Root Directory | `apps/writer` | `apps/reader` |
+| Include files outside the root directory in the Build Step | **On** (the default; the install runs at the repo root) | **On** |
+| Framework Preset | Vite | Vite |
+| Install Command | `cd ../.. && npm ci` | `cd ../.. && npm ci` |
+| Build Command | `cd ../.. && npm run build -w @deccan-birders/writer` | `cd ../.. && npm run build -w @deccan-birders/reader` |
+| Output Directory | `dist` | `dist` |
+| Node.js Version | 22.x | 22.x |
+| Environment variables | `VITE_READER_URL=https://<your Almanac domain>` (for "Open in Almanac" links). Optional: `VITE_SUBSIDISED_GATEWAY_URL`, `VITE_SWARM_ID_ORIGIN` (defaults are right) | none needed (optional `VITE_DEFAULT_GATEWAY`) |
+
+Why the install runs at the root: the apps are npm workspaces and depend on `@deccan-birders/format`
+through the root `package-lock.json`, so a plain install inside `apps/writer` would not find it.
+Both apps read everything from the query string, so no rewrites are needed. Deploy Almanac first
+so its URL can go into the Field Journal's `VITE_READER_URL`, and keep the Field Journal on one
+stable domain: Swarm ID derives the journal address from the app's origin, so a new domain means
+a new, empty journal. Preview deployments get their own URLs, so sign in on the production domain
+when filing real sightings.
 
 ## Layout
 
