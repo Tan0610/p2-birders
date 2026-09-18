@@ -35,7 +35,7 @@ export function IdentityBar(props: {
             </button>
           </>
         ) : (
-          <button type="button" className="btn btn-ink" onClick={props.onSignIn} disabled={busy}>
+          <button type="button" className="btn btn-tag" onClick={props.onSignIn} disabled={busy}>
             Sign in with Swarm ID
           </button>
         )}

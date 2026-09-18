@@ -219,6 +219,34 @@ code,
   box-shadow: 3px 4px 0 #142c63;
 }
 
+/* The masthead sign-in: a paper luggage tag tied to the notebook, not a web3 "connect" pill. */
+.btn-tag {
+  position: relative;
+  padding-left: 2.1rem;
+  background: var(--page);
+  color: var(--ballpoint);
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
+  font-weight: 700;
+  border-radius: 4px 14px 14px 4px / 4px 50% 50% 4px;
+  transform: rotate(1.8deg);
+}
+.btn-tag::before {
+  content: '';
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: -0.35rem;
+  border-radius: 50%;
+  background: var(--soil-deep);
+  box-shadow: 0 0 0 2px var(--kraft-deep);
+}
+.btn-tag:hover:not(:disabled) {
+  transform: translate(-1px, -1px) rotate(0.6deg);
+}
+
 .btn-small {
   min-height: 38px;
   padding: 0.35rem 0.8rem;
