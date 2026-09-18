@@ -1,0 +1,10 @@
+{
+  "format": "org.deccanbirders.sighting",
+  "formatVersion": "1.0.0",
+  "id": "9d8e7f60-1a2b-4c3d-8e4f-50617283a4b5",
+  "species": { "commonName": "Great Indian Bustard" },
+  "observedOn": "1998-01-11",
+  "place": { "name": "the usual spot near Nannaj", "precision": "none" },
+  "observer": { "name": "R. Kulkarni" },
+  "createdAt": "2026-09-15T10:00:00Z"
+}

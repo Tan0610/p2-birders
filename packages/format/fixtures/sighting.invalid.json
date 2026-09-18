@@ -1,0 +1,10 @@
+{
+  "format": "org.deccanbirders.sighting",
+  "formatVersion": "1.0.0",
+  "id": "not-a-uuid",
+  "species": { "commonName": "" },
+  "observedOn": "2026-02-30",
+  "place": { "name": "near the usual spot", "precision": "exact" },
+  "observer": { "name": "Meera" },
+  "createdAt": "yesterday"
+}

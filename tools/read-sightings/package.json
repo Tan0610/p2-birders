@@ -1,0 +1,16 @@
+{
+  "name": "read-sightings",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A fourth app: a tiny Node CLI that reads Deccan Birders journals from Swarm using only FORMAT.md. Imports nothing from this repository.",
+  "type": "module",
+  "bin": {
+    "read-sightings": "./read-sightings.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0"
+  }
+}

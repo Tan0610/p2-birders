@@ -1,0 +1,39 @@
+{
+  "name": "deccan-birders",
+  "private": true,
+  "version": "1.0.0",
+  "description": "File bird sightings on Swarm under your own identity, and read them back with software that has never seen the app that wrote them.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "tools/*"
+  ],
+  "scripts": {
+    "dev:writer": "npm run dev -w @deccan-birders/writer",
+    "dev:reader": "npm run dev -w @deccan-birders/reader",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "build": "npm run build -w @deccan-birders/writer && npm run build -w @deccan-birders/reader",
+    "read": "node tools/read-sightings/read-sightings.mjs",
+    "audit:checks": "node scripts/audit-checks.mjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run audit:checks"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@noble/hashes": "2.4.0",
+    "@types/node": "22.20.3",
+    "eslint": "10.10.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.12.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0",
+    "vite": "8.3.0",
+    "vitest": "5.0.1"
+  }
+}

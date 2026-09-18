@@ -1,0 +1,17 @@
+{
+  "name": "@deccan-birders/format",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone definition of the org.deccanbirders.sighting and org.deccanbirders.journal formats. Zero runtime dependencies, no application code.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema/sighting.v1.schema.json": "./schema/sighting.v1.schema.json",
+    "./schema/journal.v1.schema.json": "./schema/journal.v1.schema.json"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

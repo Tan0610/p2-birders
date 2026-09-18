@@ -1,0 +1,23 @@
+{
+  "format": "org.deccanbirders.sighting",
+  "formatVersion": "1.0.0",
+  "id": "3f6c2a9e-8b1d-4c7e-9a2f-5d0e1b7c4a61",
+  "species": { "commonName": "Indian Robin", "scientificName": "Copsychus fulicatus" },
+  "count": 2,
+  "observedOn": "2026-09-14",
+  "observedTime": "06:40",
+  "timeZone": "Asia/Kolkata",
+  "place": { "name": "Hussain Sagar lakeside scrub, Hyderabad", "precision": "approximate", "coordinates": { "lat": 17.42, "lon": 78.47 } },
+  "observer": { "name": "Meera" },
+  "notes": "Pair on the rocks by the path, male flicking his tail up. Second one sat quietly in the lantana.",
+  "photo": {
+    "ref": "a3b1c9d27e4f5061728394a5b6c7d8e9f00112233445566778899aabbccddeef",
+    "retrieval": "bytes",
+    "contentType": "image/jpeg",
+    "byteLength": 184233,
+    "width": 1600,
+    "height": 1067
+  },
+  "createdAt": "2026-09-14T02:05:11Z",
+  "generator": { "name": "deccan-birders-field-journal", "version": "1.0.0" }
+}

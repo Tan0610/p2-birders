@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:org.deccanbirders:schema:journal:1",
+  "title": "Deccan Birders journal index, format 1.x",
+  "description": "Lists one observer's sighting records, newest first. Stored as UTF-8 JSON bytes; the latest journal reference is published on the owner's feed.",
+  "type": "object",
+  "required": ["format", "formatVersion", "owner", "feedTopic", "sequence", "previous", "updatedAt", "entries"],
+  "properties": {
+    "format": { "const": "org.deccanbirders.journal" },
+    "formatVersion": { "type": "string", "pattern": "^1\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)([-+][0-9A-Za-z.+-]*)?$" },
+    "owner": { "type": "string", "pattern": "^(0x)?[0-9a-fA-F]{40}$" },
+    "feedTopic": { "type": "string", "minLength": 1 },
+    "sequence": { "type": "integer", "minimum": 0, "description": "Equals the feed index this journal is published at." },
+    "previous": {
+      "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^(0x)?[0-9a-fA-F]{64}$" }]
+    },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "id", "commonName", "observedOn", "hasPhoto", "addedAt"],
+        "properties": {
+          "ref": { "type": "string", "pattern": "^(0x)?[0-9a-fA-F]{64}$" },
+          "id": { "type": "string", "minLength": 1 },
+          "commonName": { "type": "string" },
+          "observedOn": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "hasPhoto": { "type": "boolean" },
+          "addedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

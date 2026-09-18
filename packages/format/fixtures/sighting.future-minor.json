@@ -1,0 +1,11 @@
+{
+  "format": "org.deccanbirders.sighting",
+  "formatVersion": "1.3.0",
+  "id": "0c1d2e3f-4a5b-4c6d-9e7f-8091a2b3c4d5",
+  "species": { "commonName": "Yellow-throated Bulbul" },
+  "observedOn": "2026-08-02",
+  "place": { "name": "Hampi boulders", "precision": "none" },
+  "observer": { "name": "Arjun" },
+  "createdAt": "2026-08-02T04:30:00Z",
+  "weather": { "sky": "overcast", "note": "a field added in a later minor version; 1.0 readers ignore it" }
+}

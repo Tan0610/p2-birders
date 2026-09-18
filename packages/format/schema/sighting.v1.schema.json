@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:org.deccanbirders:schema:sighting:1",
+  "title": "Deccan Birders sighting record, format 1.x",
+  "description": "One bird sighting. Stored on Swarm as UTF-8 JSON bytes (read from /bytes/<ref>). format and formatVersion are written first.",
+  "type": "object",
+  "required": ["format", "formatVersion", "id", "species", "observedOn", "place", "observer", "createdAt"],
+  "properties": {
+    "format": { "const": "org.deccanbirders.sighting" },
+    "formatVersion": { "type": "string", "pattern": "^1\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)([-+][0-9A-Za-z.+-]*)?$" },
+    "id": { "type": "string", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$" },
+    "species": {
+      "type": "object",
+      "required": ["commonName"],
+      "properties": {
+        "commonName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "scientificName": { "type": "string", "maxLength": 120 }
+      }
+    },
+    "count": { "type": "integer", "minimum": 1, "maximum": 100000 },
+    "observedOn": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Local date at the place. Not in the future." },
+    "observedTime": { "type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$" },
+    "timeZone": { "type": "string", "minLength": 1, "maxLength": 64, "description": "IANA name, e.g. Asia/Kolkata" },
+    "place": {
+      "type": "object",
+      "required": ["name", "precision"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "precision": { "enum": ["exact", "approximate", "none"] },
+        "coordinates": {
+          "type": "object",
+          "required": ["lat", "lon"],
+          "properties": {
+            "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+            "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+          }
+        }
+      },
+      "if": { "properties": { "precision": { "const": "none" } } },
+      "then": { "not": { "required": ["coordinates"] } },
+      "else": { "required": ["coordinates"] }
+    },
+    "observer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 120 } }
+    },
+    "notes": { "type": "string", "maxLength": 2000 },
+    "photo": {
+      "type": "object",
+      "required": ["ref", "retrieval", "contentType", "byteLength"],
+      "properties": {
+        "ref": { "type": "string", "pattern": "^(0x)?[0-9a-fA-F]{64}$" },
+        "retrieval": { "const": "bytes" },
+        "contentType": { "enum": ["image/jpeg", "image/png", "image/webp"] },
+        "byteLength": { "type": "integer", "minimum": 1 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "generator": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": { "name": { "type": "string" }, "version": { "type": "string" } }
+    }
+  }
+}
