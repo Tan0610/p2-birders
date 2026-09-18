@@ -108,15 +108,29 @@ export async function fileSighting(opts: {
   }
 }
 
+/** Journal editions from this tab are published one at a time (see publishJournal). */
+let publishQueue: Promise<unknown> = Promise.resolve();
+
+type Published = { journalRef: string; feedIndex: string; owner: string; socAddress: string };
+
 /**
  * Lists every queued sighting in a new journal edition and points the feed at it.
  * Also used on its own by "Retry journal update".
+ *
+ * Runs are serialised: a retry pressed while a filing is still publishing waits
+ * for it, then reads the feed again, so two runs in one tab can never pick the
+ * same feed index or drop each other's entries.
  */
-export async function publishJournal(
-  client: SwarmIdClient,
-  uploader: Uploader,
-  onStep: StepListener,
-): Promise<{ journalRef: string; feedIndex: string; owner: string; socAddress: string }> {
+export function publishJournal(client: SwarmIdClient, uploader: Uploader, onStep: StepListener): Promise<Published> {
+  const run = publishQueue.then(
+    () => publishJournalNow(client, uploader, onStep),
+    () => publishJournalNow(client, uploader, onStep),
+  );
+  publishQueue = run.catch(() => undefined);
+  return run;
+}
+
+async function publishJournalNow(client: SwarmIdClient, uploader: Uploader, onStep: StepListener): Promise<Published> {
   onStep('journal', 'active');
   // The owner is resolved through a feed *reader* (read-only, no upload). The only
   // feed writer in this app lives in uploader.swarmId.ts, behind the capability gate.
@@ -138,7 +152,8 @@ export async function publishJournal(
     }
   }
 
-  const next = buildNextJournal(latest, owner, pendingEntries());
+  const included = pendingEntries();
+  const next = buildNextJournal(latest, owner, included);
   const journalRef = await failStep(onStep, 'journal', () => uploader.uploadBytes('journal', encodeJournal(next)));
   onStep('journal', 'done', journalRef);
 
@@ -147,7 +162,9 @@ export async function publishJournal(
   onStep('pointer', 'done', `edition ${pointer.index}`);
 
   save(KEYS.lastIndex, { ...load<Record<string, string>>(KEYS.lastIndex, {}), [owner]: pointer.index });
-  save(KEYS.pending, []);
+  // Only clear what this edition listed; anything queued meanwhile stays for the next one.
+  const listed = new Set(included.map((e) => e.id));
+  save(KEYS.pending, pendingEntries().filter((e) => !listed.has(e.id)));
   return { journalRef, feedIndex: pointer.index, owner: pointer.owner || owner, socAddress: pointer.socAddress };
 }
 
