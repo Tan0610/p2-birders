@@ -12,6 +12,10 @@ It uses plain `GET` requests with no custom headers, so it works against the pub
 gateway from any origin: `/chunks/<soc>` for the journal feed and `/bytes/<ref>` for
 journals, records and photos.
 
+It also recovers who signed each journal pointer (FORMAT.md §3.2, rule 3) and says so
+in "How this page found the journal", with a warning if the signer is not the journal
+address you opened.
+
 ```sh
 npm run dev:reader     # http://localhost:5174
 ```
