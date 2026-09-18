@@ -100,9 +100,10 @@ export const MESSAGES: Record<ErrorCode, ErrorCopy> = {
     action: 'retry',
   },
   GATEWAY_CORS_REFUSED: {
-    title: 'The upload was refused before it started',
-    message: 'The browser blocked the request. With the public gateway this usually means a header it does not accept, or a network filter in between.',
-    next: 'Try again on another network. If it keeps happening, use your own drive or Bee node.',
+    title: 'The browser blocked the upload request',
+    message:
+      'The request got no answer this page is allowed to read ("Failed to fetch"). Browsers report three causes this way and will not say which: the gateway refusing the request under its CORS rules (for example a header it does not accept), a network filter in between, or the gateway being unreachable.',
+    next: 'Try again on another network. If it keeps happening, file through your own drive or Bee node in Where uploads go.',
     action: 'retry',
   },
   PAYLOAD_TOO_LARGE: {
