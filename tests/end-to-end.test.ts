@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadHistory, loadJournalByOwner, loadJournalByRef, loadSighting } from '../apps/reader/src/journal';
 // @ts-expect-error: plain ESM helper without type declarations
-import { createStore, seedSampleJournal, startMockGateway } from '../scripts/mock-gateway.mjs';
+import { createStore, createThrowawaySigner, seedSampleJournal, startMockGateway } from '../scripts/mock-gateway.mjs';
 
 // Both independent readers, against a gateway holding data laid out exactly as
 // FORMAT.md describes: feed updates at /chunks, everything else at /bytes.
@@ -25,6 +25,7 @@ describe('Almanac loader', () => {
     expect(loaded.feed?.index).toBe(2n);
     expect(loaded.journalRef).toBe(seeded.journalRefs[2]);
     expect(loaded.journal.entries).toHaveLength(6);
+    expect(loaded.feed?.signer).toBe(seeded.owner);
     expect(loaded.warnings).toEqual([]);
   });
 
@@ -55,6 +56,24 @@ describe('Almanac loader', () => {
     const history = await loadHistory(gateway.url, journal);
     expect(history.map((h) => h.sequence)).toEqual([1, 0]);
   });
+});
+
+it('warns when a pointer is not signed by the journal address', async () => {
+  const store = createStore();
+  const signer = createThrowawaySigner();
+  const seededHere = seedSampleJournal(store, signer);
+  // Re-sign update 2 with someone else's key but keep it at the owner's address.
+  const other = createThrowawaySigner();
+  const addr = store.putFeedUpdate({ ...signer, secretKey: other.secretKey }, 2, seededHere.journalRefs[2], 1_758_000_000);
+  expect(store.chunks.has(addr)).toBe(true);
+  const gw = await startMockGateway({ port: 0, store });
+  try {
+    const loaded = await loadJournalByOwner(gw.url, seededHere.owner);
+    expect(loaded.feed?.signer).toBe(other.owner);
+    expect(loaded.warnings.join(' ')).toMatch(/signed by 0x/);
+  } finally {
+    await gw.close();
+  }
 });
 
 describe('read-sightings CLI', () => {
