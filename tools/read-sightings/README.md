@@ -2,8 +2,9 @@
 
 A command-line reader for Deccan Birders journals. It was written from
 [`FORMAT.md`](../../FORMAT.md) alone and imports nothing from this repository, only
-`@noble/hashes` for keccak256. It is the proof that a fourth app, one nobody on
-the project wrote, can read the records.
+`@noble/hashes` (keccak256) and `@noble/curves` (to check who signed the journal
+pointer). It is the proof that a fourth app, one nobody on the project wrote, can
+read the records.
 
 ```sh
 node read-sightings.mjs --owner 0x<journal address>
