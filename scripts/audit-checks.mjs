@@ -75,7 +75,7 @@ const check = (name, problems) => results.push({ name, problems });
 {
   const problems = [];
   const readerAllowed = (i) =>
-    i.startsWith('.') || ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', '@deccan-birders/format'].includes(i) || i.startsWith('@noble/hashes/') || i.startsWith('@fontsource/');
+    i.startsWith('.') || ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', '@deccan-birders/format'].includes(i) || i.startsWith('@noble/hashes/') || i.startsWith('@noble/curves/') || i.startsWith('@fontsource/');
   for (const f of walk('apps/reader/src', ['.ts', '.tsx'])) {
     for (const i of importsOf(read(f))) {
       if (!readerAllowed(i)) problems.push(`${f} imports ${i}`);
