@@ -31,6 +31,11 @@ a {
   border-radius: 2px;
 }
 
+/* headings that receive focus from code (after filing, on an error) should not draw a ring */
+[tabindex='-1']:focus {
+  outline: none;
+}
+
 code,
 .ref {
   font-family: var(--font-data);
@@ -360,17 +365,13 @@ code,
   margin-top: 0.6rem;
 }
 
+/* On wide screens the note hangs off the page edge and the form flows around it,
+   so a tall note (a blocked state) never hides a field. */
 @media (min-width: 960px) {
   .sticky {
-    position: absolute;
-    right: -2.2rem;
-    top: 1.6rem;
+    float: right;
     width: 17rem;
-    margin: 0;
-  }
-  .sighting-form .page-title,
-  .sighting-form .page-intro {
-    max-width: calc(100% - 15rem);
+    margin: -0.9rem -2.6rem 1.25rem 1.5rem;
   }
 }
 
@@ -378,18 +379,22 @@ code,
 
 .page-title {
   position: relative;
-  display: inline-block;
   margin: 0 0 0.5rem;
   font-family: var(--font-display);
   font-weight: 400;
   font-size: var(--step-3);
   line-height: 1.05;
 }
+.page-title {
+  padding-bottom: 1.1rem;
+}
+/* drawn under the words; absolutely placed so it never has to dodge the note */
 .title-squiggle {
-  display: block;
-  width: 100%;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: min(100%, 8.6em);
   height: 12px;
-  margin-top: 0.3rem;
   color: var(--stamp);
 }
 
@@ -823,6 +828,7 @@ code,
 .filed {
   position: relative;
   padding: 1rem 0 0;
+  min-height: 19rem;
 }
 .filed h2 {
   max-width: 30rem;
@@ -840,10 +846,11 @@ code,
 }
 
 .stamp {
-  float: right;
+  position: absolute;
+  right: 0.5rem;
+  bottom: -0.5rem;
   display: grid;
   place-items: center;
-  margin: -0.5rem 0 1rem 1rem;
   width: 9.5rem;
   height: 6.2rem;
   border: 5px double var(--stamp);
@@ -1122,7 +1129,7 @@ code,
     height: 45px;
   }
   .stamp {
-    float: none;
+    position: static;
     margin: 0 0 1rem;
   }
 }
