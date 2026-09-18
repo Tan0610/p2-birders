@@ -41,9 +41,18 @@ export async function loadJournalByRef(base: string, ref: string, signal?: Abort
 /** owner → latest feed update → journal bytes → validated journal. */
 export async function loadJournalByOwner(base: string, owner: string, hint?: bigint, signal?: AbortSignal): Promise<LoadedJournal> {
   const ownerRaw = ownerBytes(owner);
-  const update = await resolveLatest(base, hexToBytes(JOURNAL_TOPIC_HEX), ownerRaw, hint, signal);
+  const misses = new Map<bigint, number>();
+  const update = await resolveLatest(base, hexToBytes(JOURNAL_TOPIC_HEX), ownerRaw, hint, signal, (i, status) => misses.set(i, status));
   if (!update) {
-    throw new ReaderError('EMPTY_JOURNAL', 'No journal edition has been published at this address: feed update 0 does not exist on this gateway.');
+    // Bee answers a missing chunk with 404, but also sometimes with 500, which is
+    // also what a struggling gateway says. Tell the reader which one we saw.
+    throw misses.get(0n) === 500
+      ? new ReaderError(
+          'EMPTY_JOURNAL',
+          'The gateway answered 500 for feed update 0, twice. Bee says that both for a chunk it cannot find and when it is struggling, so either nothing has been published at this address yet or this gateway is having trouble.',
+          'GET /chunks/<feed update 0> → 500, 500',
+        )
+      : new ReaderError('EMPTY_JOURNAL', 'No journal edition has been published at this address: feed update 0 does not exist on this gateway (404).');
   }
   const loaded = await loadJournalByRef(base, update.journalRef, signal);
   const warnings: string[] = [];

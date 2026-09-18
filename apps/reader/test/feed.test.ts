@@ -1,6 +1,7 @@
 import { JOURNAL_TOPIC_HEX, JOURNAL_TOPIC_STRING } from '@deccan-birders/format';
 import { bytesToHex, concatBytes, hexToBytes } from '@noble/hashes/utils.js';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { loadJournalByOwner } from '../src/journal';
 import { feedIdentifier, findLatestIndex, ownerBytes, parseFeedChunk, socAddress, topicFromString } from '../src/swarm/feed';
 
 // The same vectors are printed in FORMAT.md §3.4. They were produced with
@@ -105,5 +106,34 @@ describe('findLatestIndex', () => {
     const f = upTo(40);
     await findLatestIndex(f.exists, 40n);
     expect(f.calls.length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('journal lookup says why it found nothing', () => {
+  const owner = `0x${'1'.repeat(40)}`;
+  const answer = (status: number) => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      calls.push(url);
+      return new Response(null, { status });
+    });
+    return calls;
+  };
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('a 404 on update 0 means the journal is empty', async () => {
+    const calls = answer(404);
+    await expect(loadJournalByOwner('http://gw.test', owner)).rejects.toMatchObject({ code: 'EMPTY_JOURNAL', message: expect.stringMatching(/404/) });
+    expect(calls.every((u) => u.includes('/chunks/'))).toBe(true);
+  });
+
+  it('a 500 on update 0 is reported as possibly the gateway, not flatly as empty', async () => {
+    answer(500);
+    await expect(loadJournalByOwner('http://gw.test', owner)).rejects.toMatchObject({ code: 'EMPTY_JOURNAL', message: expect.stringMatching(/500.*struggling|trouble/) });
+  });
+
+  it('any other status is a gateway error with the status in it', async () => {
+    answer(503);
+    await expect(loadJournalByOwner('http://gw.test', owner)).rejects.toMatchObject({ code: 'GATEWAY_ERROR', message: expect.stringMatching(/503/) });
   });
 });

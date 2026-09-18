@@ -84,20 +84,27 @@ export async function fetchFeedUpdate(
   owner: Uint8Array,
   index: bigint,
   signal?: AbortSignal,
+  onMiss?: (index: bigint, status: number) => void,
 ): Promise<FeedUpdate | null> {
   const id = feedIdentifier(topic, index);
   const address = bytesToHex(socAddress(id, owner));
+  let status = 0;
   for (let attempt = 0; attempt < 2; attempt++) {
+    // GET /chunks is the read side of the single-owner-chunk upload (POST /soc) that
+    // wrote this update: it returns the chunk exactly as stored, identifier and
+    // signature included, which is what lets the reader check who signed it.
     const res = await getWithTimeout(`${base}/chunks/${address}`, 10_000, signal);
     if (res.ok) {
       const chunk = new Uint8Array(await res.arrayBuffer());
       const parsed = parseFeedChunk(chunk, id);
       return { index, socAddress: address, signer: recoverFeedSigner(chunk), ...parsed };
     }
-    if (res.status !== 404 && res.status !== 500) {
-      throw new ReaderError('GATEWAY_ERROR', `The gateway answered ${res.status} while looking up the journal.`);
+    status = res.status;
+    if (status !== 404 && status !== 500) {
+      throw new ReaderError('GATEWAY_ERROR', `The gateway answered ${status} while looking up the journal.`);
     }
   }
+  onMiss?.(index, status);
   return null;
 }
 
@@ -140,10 +147,11 @@ export async function resolveLatest(
   owner: Uint8Array,
   hint?: bigint,
   signal?: AbortSignal,
+  onMiss?: (index: bigint, status: number) => void,
 ): Promise<FeedUpdate | null> {
   const seen = new Map<bigint, FeedUpdate | null>();
   const probe = async (i: bigint) => {
-    if (!seen.has(i)) seen.set(i, await fetchFeedUpdate(base, topic, owner, i, signal));
+    if (!seen.has(i)) seen.set(i, await fetchFeedUpdate(base, topic, owner, i, signal, onMiss));
     return seen.get(i) !== null;
   };
   const latest = await findLatestIndex(probe, hint);
