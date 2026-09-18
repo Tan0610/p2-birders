@@ -311,7 +311,7 @@ code,
 .sticky {
   position: relative;
   margin: -0.5rem 0 1.5rem auto;
-  max-width: 22rem;
+  max-width: min(22rem, 100%);
   padding: 1rem 1.1rem 0.9rem;
   background: var(--note-wait);
   box-shadow: var(--shadow-lift);
@@ -401,16 +401,17 @@ code,
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.25rem;
 }
 .row-species {
-  grid-template-columns: 1fr 7rem;
+  grid-template-columns: minmax(0, 1fr) 7rem;
 }
 
 .field {
   display: flex;
   flex-direction: column;
+  min-width: 0; /* inputs have a wide intrinsic size; let the grid shrink them on phones */
   gap: 0.2rem;
   margin-bottom: 1.35rem;
 }
@@ -559,7 +560,7 @@ code,
 
 .coords {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 1.25rem;
   margin-top: 1rem;
   align-items: end;
@@ -576,7 +577,7 @@ code,
 
 @media (min-width: 640px) {
   .coords {
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
   }
   .coords .locate {
     grid-column: auto;
