@@ -1,7 +1,7 @@
 import { JOURNAL_TOPIC_STRING, decodeSighting, encodeSighting } from '@deccan-birders/format';
 import { describe, expect, it } from 'vitest';
 import { MESSAGES, UploadFailure, classifyError } from '../src/errors';
-import { emptyForm, toDraft } from '../src/formModel';
+import { emptyForm, newSightingId, toDraft } from '../src/formModel';
 import { buildNextJournal } from '../src/swarm/journal';
 
 const online = () => true;
@@ -88,5 +88,19 @@ describe('buildNextJournal', () => {
     expect(j.sequence).toBe(7);
     expect(j.previous).toBe('f'.repeat(64));
     expect(j.entries.map((e) => e.id)).toEqual(['new', 'dup', 'old']);
+  });
+});
+
+describe('newSightingId', () => {
+  it('makes a UUID v4 the format accepts, even without crypto.randomUUID', () => {
+    const original = crypto.randomUUID;
+    try {
+      // @ts-expect-error simulating a non-secure context
+      crypto.randomUUID = undefined;
+      const id = newSightingId();
+      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    } finally {
+      crypto.randomUUID = original;
+    }
   });
 });
