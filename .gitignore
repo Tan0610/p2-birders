@@ -1,0 +1,22 @@
+# dependencies & builds
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# secrets and local env — never commit
+.env
+.env.*
+!.env.example
+*.local
+*.key
+*.pem
+.secrets/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.vercel
