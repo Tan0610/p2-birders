@@ -22,6 +22,15 @@ Meera files a sighting in the Field Journal. She sends the group her journal add
 in Almanac, or with `read-sightings`, or with whatever someone writes next year from `FORMAT.md`.
 Nobody exports anything, because the records were never inside the app.
 
+## What it looks like
+
+| Field Journal (signed out, live Swarm ID) | Almanac, reading a journal | Almanac, one sighting |
+|---|---|---|
+| ![Field Journal form on a yellow notebook page](docs/screenshots/field-journal.png) | ![Almanac showing pressed specimen sheets](docs/screenshots/almanac-journal.png) | ![Almanac sighting detail](docs/screenshots/almanac-sighting.png) |
+
+The Almanac screenshots read the sample journal served by `npm run mock:gateway`
+(illustrative records and drawn placeholder photos), not real sightings.
+
 ## How it fits together
 
 ```
