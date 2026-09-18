@@ -35,8 +35,18 @@ const check = (name, problems) => results.push({ name, problems });
   const writerFiles = walk('apps/writer/src', ['.ts', '.tsx']);
   const uploadCall = /\.(uploadData|uploadFile|uploadChunk|uploadRawPayload|uploadPayload|uploadReference|gsocSend|actUploadData)\s*\(/;
   const allowed = new Set(['apps/writer/src/swarm/uploader.swarmId.ts', 'apps/writer/src/swarm/uploader.ownNode.ts']);
+  // Factories and helpers that exist only to write: a feed/SOC writer, or a Bee upload tag.
+  const writeFactory = /\.(makeSequentialFeedWriter|makeFeedWriter|makeEpochFeedWriter|makeSOCWriter|createTag)\s*\(/;
   for (const f of writerFiles) {
     if (uploadCall.test(read(f)) && !allowed.has(f)) problems.push(`${f} calls an upload method directly instead of going through uploader.ts`);
+    if (writeFactory.test(read(f)) && !allowed.has(f)) problems.push(`${f} creates a feed writer or upload tag outside the gated uploader files`);
+  }
+  // Nothing else in the repository may write: the readers, the CLI and the mock gateway only GET.
+  const nonWriter = [...walk('apps/reader/src', ['.ts', '.tsx']), ...walk('tools', ['.mjs', '.js', '.ts']), 'scripts/mock-gateway.mjs'];
+  for (const f of nonWriter) {
+    const src = read(f);
+    if (uploadCall.test(src) || writeFactory.test(src)) problems.push(`${f} calls a Swarm write method`);
+    if (/method:\s*['"](POST|PUT|PATCH|DELETE)['"]/i.test(src)) problems.push(`${f} sends a non-GET request`);
   }
   const uploader = read('apps/writer/src/swarm/uploader.ts');
   const methods = (uploader.match(/^\s{4}async \w+\(/gm) ?? []).length;
