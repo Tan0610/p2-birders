@@ -175,7 +175,9 @@ export function App() {
 
       <main className="spread">
         <div className="page">
-          <CapabilityNote state={state} onSignIn={signIn} onOpenRoute={() => setRouteOpen(true)} onReload={() => location.reload()} />
+          {phase !== 'filed' && (
+            <CapabilityNote state={state} onSignIn={signIn} onOpenRoute={() => setRouteOpen(true)} onReload={() => location.reload()} />
+          )}
 
           {phase === 'filed' && filed ? (
             <FiledStamp filed={filed} onAnother={fileAnother} />
