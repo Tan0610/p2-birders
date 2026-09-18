@@ -26,6 +26,13 @@ export function Provenance({ gateway, loaded }: { gateway: string; loaded: Loade
             Looked up feed index <strong>{feed.index.toString()}</strong> of topic <code>{journal.feedTopic}</code> owned by{' '}
             <code>0x{journal.owner}</code>, at chunk <code className="ref">{feed.socAddress}</code>. It was written{' '}
             {new Date(feed.timestamp * 1000).toLocaleString('en-IN')}.
+            {feed.signer === journal.owner.replace(/^0x/i, '').toLowerCase() ? (
+              <> The chunk's signature checks out: it was signed by the journal address itself.</>
+            ) : feed.signer ? (
+              <> The chunk is signed by <code>0x{feed.signer}</code>, which is not the journal address.</>
+            ) : (
+              <> Its signature could not be checked.</>
+            )}
           </li>
         ) : (
           <li>Opened directly by its reference; no feed lookup.</li>
