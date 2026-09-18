@@ -154,7 +154,8 @@ Rules:
 ```
 1. latest = highest i such that GET /chunks/socAddress_i returns 200
      - if index 0 is missing, the journal is empty
-     - gateways answer a missing chunk with 404, sometimes 500; retry once before calling it missing
+     - gateways answer a missing chunk with 404, sometimes 500; retry once before calling it missing,
+       and if index 0 only ever got 500, say the gateway may be at fault rather than "empty"
      - search: check 0, then 1, 2, 4, 8, … until a miss, then binary-search between the last hit and the miss
 2. journalRef = payload[8..40] of that chunk
 3. journal    = GET /bytes/<journalRef>, check format + major version + rules above
@@ -187,9 +188,19 @@ and, separately, with `@noble/hashes`. `apps/reader/test/feed.test.ts` and
 | Sighting record | bytes upload | `GET /bytes/<ref>` |
 | Photo | bytes upload | `GET /bytes/<ref>` |
 | Journal index | bytes upload | `GET /bytes/<ref>` |
-| Journal pointer (feed update) | single-owner chunk upload | `GET /chunks/<socAddress>` |
+| Journal pointer (feed update) | single-owner chunk upload (`POST /soc/<owner>/<identifier>?sig=…`) | `GET /chunks/<socAddress>` |
 
 Nothing in this format is read through `/bzz`.
+
+Why `/chunks` is the matching read for a feed update: a single-owner chunk is a chunk. `POST /soc`
+stores exactly one chunk at `socAddress = keccak256(identifier ‖ owner)`, and `GET /chunks/<address>`
+returns that chunk as stored, `identifier ‖ signature ‖ span ‖ payload`. It is the only read that
+hands back the signature in the body, which rule 3 of §3.2 needs. The alternatives are not
+equivalent: `GET /feeds/<owner>/<topic>` resolves the index on the node and reports it only in
+`swarm-feed-index` response headers, which a browser cannot read across origins unless the
+gateway exposes them, and `GET /soc/<owner>/<identifier>` (newer Bee versions) returns the payload
+with the signature moved into a response header. There is no bytes or manifest step in between,
+so `/bytes` and `/bzz` do not apply to the pointer at all.
 
 ## 5. Sharing links
 

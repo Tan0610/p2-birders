@@ -11,9 +11,13 @@ import { recoverFeedSigner } from './verify';
  *   GET /chunks/<socAddress_i>  ->  identifier(32) || signature(65) || span(8, LE) || payload
  *   payload = uint64_be(unixSeconds) || journalRef(32)
  *
- * A feed update is a single-owner chunk, so it is read through the chunk
- * endpoint it was stored as. The public gateway does not expose the
- * swarm-feed-index headers to browsers, so the latest index is found by probing.
+ * Endpoint choice: the writer stores each update with the single-owner-chunk
+ * upload (POST /soc/<owner>/<id>), which puts ONE chunk at socAddress_i. A SOC
+ * is a chunk, so the matching read is GET /chunks/<socAddress_i>: it returns the
+ * chunk byte for byte, signature included (FORMAT.md §4). Nothing here is a
+ * bytes tree or a manifest, so /bytes and /bzz do not apply. /feeds/... would
+ * report the index only in swarm-feed-index headers, which the public gateway
+ * does not expose to browsers, so the latest index is found by probing.
  */
 
 export function topicFromString(topic: string): Uint8Array {
