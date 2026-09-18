@@ -1,0 +1,50 @@
+/*
+ * Field Journal tokens.
+ * A waterproof yellow field notebook lying on red Deccan laterite soil,
+ * written in ballpoint, with a laterite-red rubber stamp for "filed".
+ */
+:root {
+  /* surfaces */
+  --soil: #8f4f33; /* laterite soil, the desk */
+  --soil-deep: #733c25;
+  --page: #f2e6b6; /* notebook page */
+  --page-edge: #e2d198;
+  --rule: #b9c9d6; /* printed ruling */
+  --margin: #cf5d45; /* the red margin line */
+  --kraft: #d9bd8e; /* journal envelope */
+  --kraft-deep: #c4a473;
+  --note-ready: #cfe2ac;
+  --note-blocked: #f6c8b4;
+  --note-wait: #f3eee0;
+
+  /* ink */
+  --ink: #2b2823; /* graphite-basalt body text */
+  --ink-soft: #57503f;
+  --ballpoint: #22479a; /* links, focus, handwriting */
+  --stamp: #a33b25; /* primary action + FILED stamp */
+  --stamp-deep: #7f2b19;
+  --monsoon: #3c6a37; /* success */
+  --ochre: #8a5e12; /* warnings, darkened for AA on the page */
+  --error: #9b1c1c;
+  --on-soil: #fbf3dc;
+
+  /* type */
+  --font-display: 'Young Serif', 'Georgia', serif;
+  --font-body: 'Atkinson Hyperlegible', 'Verdana', sans-serif;
+  --font-hand: 'Kalam', 'Comic Sans MS', cursive;
+  --font-data: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --step--1: 0.875rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.25rem;
+  --step-2: 1.6rem;
+  --step-3: clamp(2.1rem, 1.6rem + 2.2vw, 3rem);
+
+  --line: 2rem; /* notebook ruling pitch */
+  --radius-paper: 3px;
+  --shadow-paper: 0 1px 0 rgb(0 0 0 / 0.08), 0 14px 28px -12px rgb(40 18 8 / 0.55);
+  --shadow-lift: 0 2px 0 rgb(0 0 0 / 0.1), 0 8px 18px -8px rgb(40 18 8 / 0.5);
+
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 0 0.1 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  --speckle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='turbulence' baseFrequency='.55' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.05 0 0 0 0 0.02 0 0 0 1.4 -.55'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23s)'/%3E%3C/svg%3E");
+}
