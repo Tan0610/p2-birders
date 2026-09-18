@@ -128,9 +128,16 @@ npm run check          # all of the above
 - **The journal address depends on the app's origin.** Swarm ID derives a key per app origin, so the
   local dev writer and a deployed writer have different journal addresses. Deploy the writer at one
   stable URL.
-- **npm audit.** `@snaha/swarm-id` 0.4.1 depends on `@ethersphere/bee-js` 11, which depends on
-  `axios` 0.30. The advisories concern axios's Node proxy and form handling; this app uses it only
-  in the browser, and there is no fixed release in that line.
+- **npm audit.** `@ethersphere/bee-js` 11.2.0 asks for `axios ^0.30.2`, and every axios up to
+  0.32.0 carries advisories. The root `package.json` overrides it to `axios 0.34.0`, the patched
+  release of the same 0.x line, so `npm audit` reports 0 vulnerabilities. The bee-js calls the app
+  makes (`isConnected`, `getPostageBatch`, `getAllPostageBatch`, `createTag`, `uploadData`) were
+  checked against a local stand-in node with 0.34.0, and typecheck, tests and both builds pass.
+  (`npm ls axios` prints "invalid" because 0.34.0 is outside bee-js's declared range; that is what
+  an override means.) One copy it cannot reach: `@snaha/swarm-id` 0.4.1 ships a pre-bundled
+  `dist/swarm-id.esm.js` with its own axios 0.30.3 inlined. That copy runs only in the browser, where
+  the Node-only advisories (proxy, NO_PROXY, stream limits) do not apply; it goes away when Swarm ID
+  publishes a rebuilt bundle.
 
 ## Deploying
 
