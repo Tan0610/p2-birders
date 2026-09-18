@@ -115,12 +115,17 @@ function signerOf(chunk) {
   }
 }
 
+// Feed indexes whose last answer was 500: Bee says that for a missing chunk and when it is struggling.
+const answered500 = new Set();
+
 // FORMAT.md §3: identifier_i = keccak256(topic || uint64_be(i)); address = keccak256(identifier || owner)
 async function feedUpdate(topic, owner, index) {
   const i = new Uint8Array(8);
   new DataView(i.buffer).setBigUint64(0, index, false);
   const identifier = keccak_256(concatBytes(topic, i));
   const address = bytesToHex(keccak_256(concatBytes(identifier, owner)));
+  // A feed update was written with the single-owner-chunk upload (POST /soc), i.e. as one chunk,
+  // so it is read back with GET /chunks: the stored chunk, signature included (FORMAT.md §4).
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await get(`/chunks/${address}`);
     if (res.ok) {
@@ -132,6 +137,8 @@ async function feedUpdate(topic, owner, index) {
       return { index, address, signer: signerOf(chunk), timestamp: Number(view.getBigUint64(0, false)), journalRef: bytesToHex(payload.subarray(8, 40)) };
     }
     if (res.status !== 404 && res.status !== 500) throw new Problem(`gateway answered ${res.status} for /chunks/${address}`);
+    if (res.status === 500) answered500.add(index);
+    else answered500.delete(index);
   }
   return null;
 }
@@ -174,7 +181,13 @@ async function main() {
     let journalRef;
     if (values.owner) {
       feed = await latestUpdate(hex(values.owner, 40, '--owner'), values.hint ? BigInt(values.hint) : 0n);
-      if (!feed) throw new Problem('this journal address has not published anything yet');
+      if (!feed) {
+        throw new Problem(
+          answered500.has(0n)
+            ? 'the gateway answered 500 for feed update 0, twice: either nothing is published at this address yet, or the gateway is having trouble'
+            : 'this journal address has not published anything yet (feed update 0: 404)',
+        );
+      }
       journalRef = feed.journalRef;
     } else {
       journalRef = hex(values.journal, 64, '--journal');
