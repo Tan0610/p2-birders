@@ -920,6 +920,13 @@ code,
   border-radius: 4px 4px 0 0;
   pointer-events: none;
 }
+/* on wide screens the journal card rides along while the long form scrolls */
+@media (min-width: 960px) {
+  .envelope {
+    position: sticky;
+    top: 1.5rem;
+  }
+}
 .envelope-doodle {
   position: absolute;
   right: 1rem;
