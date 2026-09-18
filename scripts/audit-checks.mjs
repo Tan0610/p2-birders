@@ -99,6 +99,17 @@ const check = (name, problems) => results.push({ name, problems });
   for (const i of importsOf(read('tools/read-sightings/read-sightings.mjs'))) {
     if (!i.startsWith('node:') && !i.startsWith('@noble/hashes/') && !i.startsWith('@noble/curves/')) problems.push(`read-sightings CLI imports ${i}`);
   }
+  // If the reader has been built, its bundle must not contain the writer's Swarm libraries either.
+  try {
+    for (const f of readdirSync(join(root, 'apps/reader/dist/assets')).filter((n) => n.endsWith('.js'))) {
+      const js = read(`apps/reader/dist/assets/${f}`);
+      for (const marker of ['SwarmIdClient', 'AxiosError', 'makeSequentialFeedWriter', 'swarm-id.snaha.net']) {
+        if (js.includes(marker)) problems.push(`the built reader (${f}) contains ${marker}, so writer-side code leaked into it`);
+      }
+    }
+  } catch {
+    // Not built yet: the source checks above still apply.
+  }
   const formatPkg = JSON.parse(read('packages/format/package.json'));
   if (Object.keys(formatPkg.dependencies ?? {}).length) problems.push('the format package has runtime dependencies');
   for (const f of walk('packages/format/src', ['.ts'])) {
