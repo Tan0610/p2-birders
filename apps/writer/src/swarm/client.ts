@@ -25,6 +25,9 @@ export function getSwarmId(): SwarmIdClient {
         description: 'Files bird sightings for the Deccan Birders under your own Swarm ID. Records are public.',
       },
       popupMode: 'popup',
+      // Each request to the Swarm ID frame may carry a whole photo, chunk by chunk,
+      // over a slow connection; the 30 s default is too tight for that.
+      timeout: 120_000,
       onConnectionChange: (info) => listeners.forEach((l) => l(info)),
     });
   }
