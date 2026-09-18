@@ -146,6 +146,10 @@ export function App() {
   );
 }
 
+function listOf(names: string[]) {
+  return names.length < 2 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
 function loadingStage(q: Query) {
   if (q.kind === 'record') return 'Fetching the sighting…';
   return q.kind === 'owner' ? 'Following the journal address to its latest edition…' : 'Reading the journal…';
@@ -229,6 +233,11 @@ function JournalView(props: {
   }, [journal.entries, results, props.search, props.order]);
 
   const observers = new Set(Object.values(results).flatMap((r) => (r.ok ? [r.record.observer.name] : [])));
+  const years = journal.entries.map((e) => Number(e.observedOn.slice(0, 4))).filter(Number.isFinite);
+  const first = Math.min(...years);
+  const last = Math.max(...years);
+  const span = years.length === 0 ? '' : first === last ? ` in ${first}` : ` from ${first} to ${last}`;
+  const species = new Set(journal.entries.map((e) => e.commonName.trim().toLowerCase())).size;
 
   return (
     <section aria-labelledby="journal-title">
@@ -240,8 +249,10 @@ function JournalView(props: {
           </h1>
           <p className="title-meta">
             Edition {journal.sequence}, updated {new Date(journal.updatedAt).toLocaleDateString('en-IN', { dateStyle: 'long' })}.{' '}
-            {journal.entries.length === 1 ? 'One sighting' : `${journal.entries.length} sightings`}.
+            {journal.entries.length === 1 ? 'One sighting' : `${journal.entries.length} sightings of ${species} species`}
+            {span}.
           </p>
+          {observers.size > 1 && <p className="title-meta">Seen by {listOf([...observers])}.</p>}
           <p className="title-address">
             <code className="ref">0x{journal.owner}</code>
           </p>
