@@ -2,8 +2,9 @@
 // read-sightings: a "fourth app" for Deccan Birders journals.
 //
 // Written from FORMAT.md alone. It imports nothing from this repository, only
-// @noble/hashes for keccak256, to show that the stored data plus the published
-// format description are enough to read everything back.
+// @noble/hashes (keccak256) and @noble/curves (secp256k1, to check who signed the
+// journal pointer), to show that the stored data plus the published format
+// description are enough to read everything back.
 //
 //   node read-sightings.mjs --owner <40-hex journal address> [--gateway URL] [--json] [--photos DIR]
 //   node read-sightings.mjs --journal <64-hex ref> [...]
@@ -12,6 +13,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { secp256k1 } from '@noble/curves/secp256k1.js';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from '@noble/hashes/utils.js';
 
@@ -19,6 +21,7 @@ const TOPIC_STRING = 'org.deccanbirders.sighting/journal/v1';
 const SIGHTING = 'org.deccanbirders.sighting';
 const JOURNAL = 'org.deccanbirders.journal';
 const DEFAULT_GATEWAY = 'https://api.gateway.ethswarm.org';
+const PREFIX = String.fromCharCode(0x19) + 'Ethereum Signed Message:' + String.fromCharCode(10) + '32';
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 class Problem extends Error {}
@@ -87,6 +90,31 @@ function decode(buf, expectedFormat) {
   return doc;
 }
 
+// FORMAT.md §3.2 rule 3: recover the address that signed a feed update.
+function signerOf(chunk) {
+  const data = new Uint8Array(4096);
+  data.set(chunk.subarray(105, 105 + 4096));
+  let level = [];
+  for (let i = 0; i < 4096; i += 32) level.push(data.subarray(i, i + 32));
+  while (level.length > 1) {
+    const next = [];
+    for (let i = 0; i < level.length; i += 2) next.push(keccak_256(concatBytes(level[i], level[i + 1])));
+    level = next;
+  }
+  const address = keccak_256(concatBytes(chunk.subarray(97, 105), level[0]));
+  const digest = keccak_256(concatBytes(utf8ToBytes(PREFIX), keccak_256(concatBytes(chunk.subarray(0, 32), address))));
+  const sig = chunk.subarray(32, 97);
+  const recovery = sig[64] >= 27 ? sig[64] - 27 : sig[64];
+  try {
+    const r = BigInt('0x' + bytesToHex(sig.subarray(0, 32)));
+    const s = BigInt('0x' + bytesToHex(sig.subarray(32, 64)));
+    const pub = new secp256k1.Signature(r, s, recovery).recoverPublicKey(digest).toBytes(false);
+    return bytesToHex(keccak_256(pub.subarray(1)).subarray(12));
+  } catch {
+    return null;
+  }
+}
+
 // FORMAT.md §3: identifier_i = keccak256(topic || uint64_be(i)); address = keccak256(identifier || owner)
 async function feedUpdate(topic, owner, index) {
   const i = new Uint8Array(8);
@@ -101,7 +129,7 @@ async function feedUpdate(topic, owner, index) {
       const payload = chunk.subarray(32 + 65 + 8);
       if (payload.length < 40) throw new Problem(`feed update ${index} is not a 40-byte journal pointer`);
       const view = new DataView(payload.buffer, payload.byteOffset, 8);
-      return { index, address, timestamp: Number(view.getBigUint64(0, false)), journalRef: bytesToHex(payload.subarray(8, 40)) };
+      return { index, address, signer: signerOf(chunk), timestamp: Number(view.getBigUint64(0, false)), journalRef: bytesToHex(payload.subarray(8, 40)) };
     }
     if (res.status !== 404 && res.status !== 500) throw new Problem(`gateway answered ${res.status} for /chunks/${address}`);
   }
@@ -180,7 +208,11 @@ async function main() {
 
   if (journal) {
     console.log(`Journal of ${journal.owner}, edition ${journal.sequence}, updated ${journal.updatedAt}`);
-    if (feed) console.log(`found at feed index ${feed.index} (chunk ${feed.address})`);
+    if (feed) {
+      console.log(`found at feed index ${feed.index} (chunk ${feed.address})`);
+      if (feed.signer === journal.owner.replace(/^0x/i, '').toLowerCase()) console.log('pointer signature checks out: signed by the journal address');
+      else console.log(`WARNING: pointer signed by ${feed.signer ? '0x' + feed.signer : 'an unreadable signature'}, not the journal address`);
+    }
     console.log('');
   }
   for (const s of sightings) {

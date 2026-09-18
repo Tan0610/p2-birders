@@ -87,7 +87,7 @@ const check = (name, problems) => results.push({ name, problems });
     if (dep.includes('writer') || dep === '@snaha/swarm-id' || dep === '@ethersphere/bee-js') problems.push(`reader depends on ${dep}`);
   }
   for (const i of importsOf(read('tools/read-sightings/read-sightings.mjs'))) {
-    if (!i.startsWith('node:') && !i.startsWith('@noble/hashes/')) problems.push(`read-sightings CLI imports ${i}`);
+    if (!i.startsWith('node:') && !i.startsWith('@noble/hashes/') && !i.startsWith('@noble/curves/')) problems.push(`read-sightings CLI imports ${i}`);
   }
   const formatPkg = JSON.parse(read('packages/format/package.json'));
   if (Object.keys(formatPkg.dependencies ?? {}).length) problems.push('the format package has runtime dependencies');
