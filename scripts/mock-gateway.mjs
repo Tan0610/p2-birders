@@ -5,6 +5,10 @@
 //   GET /bytes/<ref>     raw bytes
 //   GET /chunks/<addr>   single-owner chunks (journal feed updates)
 //
+// It is READ-ONLY and not part of either app: it has no upload endpoint and answers
+// every method other than GET (and the CORS preflight) with 405. Its sample data
+// is written straight into memory at start-up by seedSampleJournal() below.
+//
 // with permissive CORS, like the public gateway. References here are keccak256
 // of the content, not real Swarm BMT hashes; readers treat references as opaque,
 // so that difference does not matter to them. Feed updates are properly signed,
@@ -252,6 +256,9 @@ export function startMockGateway({ port = 4555, store = createStore() } = {}) {
   const server = createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     if (req.method === 'OPTIONS') return res.writeHead(204).end();
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      return res.writeHead(405, { Allow: 'GET, HEAD, OPTIONS', 'Content-Type': 'application/json' }).end(JSON.stringify({ code: 405, message: 'read-only mock gateway' }));
+    }
     const [, kind, ref] = (req.url ?? '').split('?')[0].split('/');
     const found = kind === 'bytes' ? store.bytes.get(ref) : kind === 'chunks' ? store.chunks.get(ref) : undefined;
     if (found) {
