@@ -144,7 +144,8 @@ Rules:
 2. A reader MUST check that the returned identifier equals `identifier_i` and that the span is 40.
 3. A reader MAY verify the signature: it is the owner's secp256k1 signature, with the Ethereum
    signed-message prefix, over `keccak256(identifier ‖ chunkAddress)`, where `chunkAddress` is the
-   BMT hash of `span ‖ payload`. The recovered address must equal `owner`.
+   BMT hash of `span ‖ payload`. The recovered address must equal `owner`. Almanac and
+   `read-sightings` both do this and warn when it does not match.
 4. The journal's own `sequence` SHOULD equal `i`, and its `owner` SHOULD equal the address you
    looked up. Warn if they differ.
 
