@@ -65,12 +65,23 @@ usable batch. The node has to allow the page's origin, for example
 Configuration is in `apps/writer/.env.example` and `apps/reader/.env.example`. Every value is a
 public URL; there are no secrets anywhere in this project.
 
+### Try the readers without a network
+
+```sh
+npm run mock:gateway   # serves a signed sample journal at http://127.0.0.1:4555 and prints its address
+npm run dev:reader     # then open the Almanac link it prints
+npm run read -- --owner 0x<printed address> --gateway http://127.0.0.1:4555
+```
+
+The mock gateway holds data laid out exactly as FORMAT.md describes, signed by a
+throwaway key it makes at start-up. Nothing it serves is a real sighting.
+
 ### Checks
 
 ```sh
 npm run typecheck      # tsc, all workspaces
 npm run lint           # eslint, including rules that keep the reader independent
-npm test               # vitest: format rules, feed test vectors, error mapping, bee-js interop
+npm test               # vitest: format rules, feed vectors, error mapping, bee-js interop, end-to-end readers
 npm run build          # both apps
 npm run audit:checks   # re-verifies the requirements below from the source
 npm run check          # all of the above
@@ -83,7 +94,7 @@ npm run check          # all of the above
 | **Upload capability is checked before any upload.** Every write goes through `createUploader()`, whose methods each start with `await gate()`, which runs `checkUploadCapability()`: online, Swarm ID loaded, signed in, `connectionInfo.canUpload`, the unavailable reason, and for your own node, reachable with a usable batch. It throws before the upload call if any of these fail. The File button is also disabled with the reason shown. | [`apps/writer/src/swarm/uploader.ts`](apps/writer/src/swarm/uploader.ts), [`capability.ts`](apps/writer/src/swarm/capability.ts), [`CapabilityNote.tsx`](apps/writer/src/components/CapabilityNote.tsx) |
 | **An upload route for users with no stamp.** `SwarmIdClient` is built with `subsidisedGatewayUrl: https://api.gateway.ethswarm.org/`. Your own Bee node is a second route. | [`apps/writer/src/swarm/client.ts`](apps/writer/src/swarm/client.ts), [`config.ts`](apps/writer/src/config.ts), [`uploader.ownNode.ts`](apps/writer/src/swarm/uploader.ownNode.ts) |
 | **Each record carries its format identifier and version in the uploaded bytes.** `encodeSighting()` writes `format` and `formatVersion` as the first keys and returns the exact bytes that are uploaded. | [`packages/format/src/codec.ts`](packages/format/src/codec.ts), [`FORMAT.md` §1–2](FORMAT.md) |
-| **A reader that does not import the writing app.** Almanac is its own package, Vite app and origin. It depends only on `@deccan-birders/format` (zero runtime dependencies) and `@noble/hashes`. ESLint and the audit script fail on any import of the writer, Swarm ID or bee-js. The CLI imports nothing from the repo at all. | [`apps/reader`](apps/reader), [`tools/read-sightings`](tools/read-sightings), [`eslint.config.js`](eslint.config.js) |
+| **A reader that does not import the writing app.** Almanac is its own package, Vite app and origin. It depends only on `@deccan-birders/format` (zero runtime dependencies) and `@noble/hashes`/`@noble/curves` for the feed maths and signature check. ESLint and the audit script fail on any import of the writer, Swarm ID or bee-js. The CLI imports nothing from the repo at all. | [`apps/reader`](apps/reader), [`tools/read-sightings`](tools/read-sightings), [`eslint.config.js`](eslint.config.js) |
 | **Reads use the endpoint family the data was written with.** Records, photos and journals are bytes uploads and are read from `/bytes/<ref>`. Feed updates are single-owner chunks and are read from `/chunks/<soc>`. Nothing uses `/bzz`. | [`apps/reader/src/swarm/bytes.ts`](apps/reader/src/swarm/bytes.ts), [`feed.ts`](apps/reader/src/swarm/feed.ts), [`FORMAT.md` §4](FORMAT.md) |
 | **No pin or tag on the gateway path.** The Swarm ID branch's option type is `{ pin?: never; tag?: never }`. Only `uploader.ownNode.ts`, which only talks to your own node, passes `pin: true` and a tag. ESLint forbids `pin`/`tag` anywhere else in the writer. | [`uploader.swarmId.ts`](apps/writer/src/swarm/uploader.swarmId.ts), [`uploader.ownNode.ts`](apps/writer/src/swarm/uploader.ownNode.ts) |
 | **A failed upload shows a specific reason.** 20 failure codes, each with its own title, explanation, next step and action button: no drive, drive expired, popup blocked, CORS refusal, payload too large, rate limited, gateway 5xx, own node down, journal update failed after the record was saved, and more. `classifyError()` maps Swarm ID and bee-js errors onto them; the raw detail is one click away. | [`apps/writer/src/errors.ts`](apps/writer/src/errors.ts), [`ErrorPanel.tsx`](apps/writer/src/components/ErrorPanel.tsx) |
@@ -134,12 +145,15 @@ apps/writer/                  Field Journal (React, Vite, @snaha/swarm-id 0.4.1,
   src/swarm/journal.ts        read the latest journal from your feed; build the next edition
   src/fileSighting.ts         photo → record → journal → feed pointer, step by step
   src/errors.ts               every failure, with its own words
-apps/reader/                  Almanac (React, Vite, @noble/hashes); imports only packages/format
+apps/reader/                  Almanac (React, Vite, @noble/hashes, @noble/curves); imports only packages/format
   src/swarm/feed.ts           feed maths and latest-index search, from FORMAT.md §3
   src/swarm/bytes.ts          GET /bytes
+  src/swarm/verify.ts         who signed the journal pointer (BMT + secp256k1 recovery)
 tools/read-sightings/         Node CLI reader; imports nothing from this repo
 scripts/audit-checks.mjs      re-checks the requirements from source
-tests/interop.test.ts         the reader's feed maths against bee-js
+scripts/mock-gateway.mjs      a seeded stand-in gateway (/bytes, /chunks) for tests and offline demos
+tests/interop.test.ts         the reader's feed maths and signature check against bee-js
+tests/end-to-end.test.ts      Almanac's loader and the CLI against the mock gateway
 ```
 
 ## Versions
