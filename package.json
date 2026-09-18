@@ -22,7 +22,8 @@
     "build": "npm run build -w @deccan-birders/writer && npm run build -w @deccan-birders/reader",
     "read": "node tools/read-sightings/read-sightings.mjs",
     "audit:checks": "node scripts/audit-checks.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run audit:checks"
+    "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run audit:checks",
+    "mock:gateway": "node scripts/mock-gateway.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
