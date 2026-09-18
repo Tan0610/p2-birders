@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@noble/curves": "2.4.0",
     "@noble/hashes": "2.4.0",
     "@types/node": "22.20.3",
     "eslint": "10.10.0",

@@ -7,7 +7,8 @@
 //
 // with permissive CORS, like the public gateway. References here are keccak256
 // of the content, not real Swarm BMT hashes; readers treat references as opaque,
-// so that difference does not matter to them. Signatures are zero bytes.
+// so that difference does not matter to them. Feed updates are properly signed,
+// by a throwaway key made fresh each time the gateway starts.
 //
 //   node scripts/mock-gateway.mjs            # seeded with a sample journal, port 4555
 //   node scripts/mock-gateway.mjs --port 0   # any free port
@@ -15,11 +16,43 @@
 import { createServer } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { crc32, deflateSync } from 'node:zlib';
+import { secp256k1 } from '@noble/curves/secp256k1.js';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from '@noble/hashes/utils.js';
 
 const TOPIC = keccak_256(utf8ToBytes('org.deccanbirders.sighting/journal/v1'));
-export const SAMPLE_OWNER = 'dec0de00b1bd5ee00000000000000000000fa11a';
+
+/** A journal owner for this run only: a random key that is never written anywhere. */
+export function createThrowawaySigner() {
+  const secretKey = secp256k1.utils.randomSecretKey();
+  const owner = bytesToHex(keccak_256(secp256k1.getPublicKey(secretKey, false).subarray(1)).subarray(12));
+  return { owner, secretKey };
+}
+
+const bmtRoot = (payload) => {
+  const data = new Uint8Array(4096);
+  data.set(payload);
+  let level = [];
+  for (let i = 0; i < 4096; i += 32) level.push(data.subarray(i, i + 32));
+  while (level.length > 1) {
+    const next = [];
+    for (let i = 0; i < level.length; i += 2) next.push(keccak_256(concatBytes(level[i], level[i + 1])));
+    level = next;
+  }
+  return level[0];
+};
+
+/** Signs a single-owner chunk the way Bee expects (Ethereum signed-message over identifier ‖ address). */
+function signSoc(secretKey, identifier, span, payload) {
+  const cacAddress = keccak_256(concatBytes(span, bmtRoot(payload)));
+  const digest = keccak_256(concatBytes(utf8ToBytes('\x19Ethereum Signed Message:\n32'), keccak_256(concatBytes(identifier, cacAddress))));
+  const sig = secp256k1.Signature.fromBytes(secp256k1.sign(digest, secretKey, { prehash: false, format: 'recovered' }), 'recovered');
+  const out = new Uint8Array(65);
+  out.set(hexToBytes(sig.r.toString(16).padStart(64, '0')), 0);
+  out.set(hexToBytes(sig.s.toString(16).padStart(64, '0')), 32);
+  out[64] = 27 + sig.recovery;
+  return out;
+}
 
 export function createStore() {
   const bytes = new Map();
@@ -36,16 +69,17 @@ export function createStore() {
       return this.putBytes(utf8ToBytes(JSON.stringify(obj)));
     },
     /** Writes feed update `index` exactly as FORMAT.md §3.2 describes. */
-    putFeedUpdate(ownerHex, index, journalRef, unixSeconds) {
+    putFeedUpdate(signer, index, journalRef, unixSeconds) {
       const i = new Uint8Array(8);
       new DataView(i.buffer).setBigUint64(0, BigInt(index), false);
       const identifier = keccak_256(concatBytes(TOPIC, i));
-      const address = bytesToHex(keccak_256(concatBytes(identifier, hexToBytes(ownerHex))));
+      const address = bytesToHex(keccak_256(concatBytes(identifier, hexToBytes(signer.owner))));
       const span = new Uint8Array(8);
       new DataView(span.buffer).setBigUint64(0, 40n, true);
       const ts = new Uint8Array(8);
       new DataView(ts.buffer).setBigUint64(0, BigInt(unixSeconds), false);
-      chunks.set(address, concatBytes(identifier, new Uint8Array(65), span, ts, hexToBytes(journalRef)));
+      const payload = concatBytes(ts, hexToBytes(journalRef));
+      chunks.set(address, concatBytes(identifier, signSoc(signer.secretKey, identifier, span, payload), span, payload));
       return address;
     },
   };
@@ -107,7 +141,8 @@ function birdPicture(sky, ground, bird, accent) {
 
 // ---------- the sample journal ----------
 
-export function seedSampleJournal(store, owner = SAMPLE_OWNER) {
+export function seedSampleJournal(store, signer = createThrowawaySigner()) {
+  const { owner } = signer;
   const base = { formatVersion: '1.0.0', generator: { name: 'mock-gateway seed', version: '1.0.0' } };
   const photo = (pic) => ({ ref: store.putBytes(pic), retrieval: 'bytes', contentType: 'image/png', byteLength: pic.length, width: 480, height: 360 });
   const sightings = [
@@ -206,7 +241,7 @@ export function seedSampleJournal(store, owner = SAMPLE_OWNER) {
       updatedAt,
       entries: indexes.map(entry),
     });
-    store.putFeedUpdate(owner, sequence, ref, Date.parse(updatedAt) / 1000);
+    store.putFeedUpdate(signer, sequence, ref, Date.parse(updatedAt) / 1000);
     journalRefs.push(ref);
     previous = ref;
   });
