@@ -2,6 +2,7 @@ import { FEED_PAYLOAD_BYTES } from '@deccan-birders/format';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from '@noble/hashes/utils.js';
 import { ReaderError, getWithTimeout } from './http';
+import { recoverFeedSigner } from './verify';
 
 /**
  * Journal feed resolution, implemented from FORMAT.md §3 alone:
@@ -43,6 +44,8 @@ export interface FeedUpdate {
   timestamp: number;
   journalRef: string;
   socAddress: string;
+  /** 40-hex address recovered from the chunk signature, or null if it could not be recovered. */
+  signer: string | null;
 }
 
 const IDENTIFIER = 32;
@@ -87,8 +90,9 @@ export async function fetchFeedUpdate(
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await getWithTimeout(`${base}/chunks/${address}`, 10_000, signal);
     if (res.ok) {
-      const parsed = parseFeedChunk(new Uint8Array(await res.arrayBuffer()), id);
-      return { index, socAddress: address, ...parsed };
+      const chunk = new Uint8Array(await res.arrayBuffer());
+      const parsed = parseFeedChunk(chunk, id);
+      return { index, socAddress: address, signer: recoverFeedSigner(chunk), ...parsed };
     }
     if (res.status !== 404 && res.status !== 500) {
       throw new ReaderError('GATEWAY_ERROR', `The gateway answered ${res.status} while looking up the journal.`);

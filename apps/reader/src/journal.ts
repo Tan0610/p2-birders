@@ -47,6 +47,11 @@ export async function loadJournalByOwner(base: string, owner: string, hint?: big
   }
   const loaded = await loadJournalByRef(base, update.journalRef, signal);
   const warnings: string[] = [];
+  if (update.signer === null) {
+    warnings.push('The signature on the journal pointer could not be checked, so this page cannot confirm who published it.');
+  } else if (update.signer !== normaliseHex(owner)) {
+    warnings.push(`The journal pointer is signed by 0x${update.signer}, not by the journal address you opened.`);
+  }
   if (normaliseHex(loaded.journal.owner) !== normaliseHex(owner)) {
     warnings.push('The journal says it belongs to a different address than the feed it was found on.');
   }
