@@ -697,6 +697,15 @@ code,
   color: var(--stamp-deep);
 }
 
+.draft-note {
+  margin: 0.9rem 0 0;
+  font-family: var(--font-hand);
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  transform: rotate(-0.8deg);
+  transform-origin: left;
+}
+
 /* ---------- progress ---------- */
 
 .steps {

@@ -287,6 +287,15 @@ export function SightingForm(p: Props) {
           </span>
         )}
       </div>
+      {hasDraft(form) && !p.submitting && (
+        <p className="draft-note" aria-live="polite">
+          Draft kept on this device until you file it. It is not on Swarm yet.
+        </p>
+      )}
     </form>
   );
+}
+
+function hasDraft(form: FormState) {
+  return Boolean(form.commonName.trim() || form.placeName.trim() || form.notes.trim());
 }
