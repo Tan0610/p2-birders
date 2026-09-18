@@ -25,6 +25,9 @@ export function getSwarmId(): SwarmIdClient {
         description: 'Files bird sightings for the Deccan Birders under your own Swarm ID. Records are public.',
       },
       popupMode: 'popup',
+      // This app draws its own Sign in button; keep Swarm ID's frame (and its built-in
+      // button) mounted but out of sight, instead of floating over the form.
+      containerId: 'swarm-id-frame',
       // Each request to the Swarm ID frame may carry a whole photo, chunk by chunk,
       // over a slow connection; the 30 s default is too tight for that.
       timeout: 120_000,
