@@ -87,7 +87,22 @@ function decode(buf, expectedFormat) {
   if (doc?.format !== expectedFormat) throw new Problem(`expected format ${expectedFormat}, found ${JSON.stringify(doc?.format)}`);
   const major = /^(\d+)\./.exec(String(doc.formatVersion))?.[1];
   if (major !== '1') throw new Problem(`${expectedFormat} version ${doc.formatVersion} is not supported (this tool reads 1.x)`);
+  const missing = REQUIRED[expectedFormat].filter((path) => !present(doc, path));
+  if (missing.length) throw new Problem(`${expectedFormat} is missing ${missing.join(', ')}`);
   return doc;
+}
+
+// The required fields of FORMAT.md §2 and §3.1. This tool prints them, so it checks they are there;
+// Almanac applies the full rules.
+const REQUIRED = {
+  [SIGHTING]: ['id', 'species.commonName', 'observedOn', 'place.name', 'place.precision', 'observer.name', 'createdAt'],
+  [JOURNAL]: ['owner', 'feedTopic', 'sequence', 'previous', 'updatedAt', 'entries'],
+};
+
+function present(doc, path) {
+  let v = doc;
+  for (const key of path.split('.')) v = v !== null && typeof v === 'object' ? v[key] : undefined;
+  return path === 'previous' ? v === null || typeof v === 'string' : v !== undefined && v !== null && v !== '';
 }
 
 // FORMAT.md §3.2 rule 3: recover the address that signed a feed update.
@@ -131,8 +146,9 @@ async function feedUpdate(topic, owner, index) {
     if (res.ok) {
       const chunk = new Uint8Array(await res.arrayBuffer());
       if (bytesToHex(chunk.subarray(0, 32)) !== bytesToHex(identifier)) throw new Problem(`chunk ${address} has the wrong identifier`);
+      const span = chunk.length >= 105 ? new DataView(chunk.buffer, chunk.byteOffset + 97, 8).getBigUint64(0, true) : -1n;
       const payload = chunk.subarray(32 + 65 + 8);
-      if (payload.length < 40) throw new Problem(`feed update ${index} is not a 40-byte journal pointer`);
+      if (span !== 40n || payload.length < 40) throw new Problem(`feed update ${index} is not a 40-byte journal pointer (span ${span})`);
       const view = new DataView(payload.buffer, payload.byteOffset, 8);
       return { index, address, signer: signerOf(chunk), timestamp: Number(view.getBigUint64(0, false)), journalRef: bytesToHex(payload.subarray(8, 40)) };
     }
@@ -175,12 +191,16 @@ async function main() {
   let journal = null;
   let feed = null;
 
+  const owner = values.owner ? hex(values.owner, 40, '--owner') : null;
+  const warnings = [];
+
   if (values.record) {
     refs = [hex(values.record, 64, '--record')];
   } else {
     let journalRef;
-    if (values.owner) {
-      feed = await latestUpdate(hex(values.owner, 40, '--owner'), values.hint ? BigInt(values.hint) : 0n);
+    if (owner) {
+      if (values.hint !== undefined && !/^\d+$/.test(values.hint)) throw new Problem('--hint must be a whole number (a feed index)');
+      feed = await latestUpdate(owner, values.hint ? BigInt(values.hint) : 0n);
       if (!feed) {
         throw new Problem(
           answered500.has(0n)
@@ -194,7 +214,14 @@ async function main() {
     }
     journal = decode(await bytes(journalRef), JOURNAL);
     journal.ref = journalRef;
-    refs = journal.entries.map((e) => hex(e.ref, 64, 'entry ref'));
+    if (!Array.isArray(journal.entries)) throw new Problem('the journal has no entries list');
+    refs = journal.entries.map((e) => hex(e?.ref, 64, 'entry ref'));
+    // FORMAT.md §3.2 rules 3 and 4: the pointer is signed by the address we looked up, and the journal agrees.
+    if (feed) {
+      if (feed.signer !== owner) warnings.push(`the journal pointer is signed by ${feed.signer ? '0x' + feed.signer : 'an unreadable signature'}, not by 0x${owner}`);
+      if (String(journal.owner).replace(/^0x/i, '').toLowerCase() !== owner) warnings.push(`the journal says it belongs to ${journal.owner}, not 0x${owner}`);
+      if (String(journal.sequence) !== String(feed.index)) warnings.push(`the journal says it is edition ${journal.sequence}, but it was found at feed index ${feed.index}`);
+    }
   }
 
   const sightings = [];
@@ -203,9 +230,15 @@ async function main() {
       const record = decode(await bytes(ref), SIGHTING);
       if (values.photos && record.photo?.ref) {
         await mkdir(values.photos, { recursive: true });
-        const file = join(values.photos, `${record.id}.${EXT[record.photo.contentType] ?? 'bin'}`);
-        await writeFile(file, await bytes(hex(record.photo.ref, 64, 'photo ref')));
-        record.photo.savedAs = file;
+        const photo = await bytes(hex(record.photo.ref, 64, 'photo ref'));
+        // FORMAT.md §2.1: typed by the record, and checked against its byteLength.
+        if (photo.length !== record.photo.byteLength) {
+          record.photo.problem = `photo is ${photo.length} bytes, the record says ${record.photo.byteLength}; not saved`;
+        } else {
+          const file = join(values.photos, `${record.id}.${EXT[record.photo.contentType] ?? 'bin'}`);
+          await writeFile(file, photo);
+          record.photo.savedAs = file;
+        }
       }
       sightings.push({ ref, record });
     } catch (err) {
@@ -215,7 +248,7 @@ async function main() {
   }
 
   if (values.json) {
-    console.log(JSON.stringify({ gateway: base, feed, journal, sightings }, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 2));
+    console.log(JSON.stringify({ gateway: base, feed, journal, warnings, sightings }, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 2));
     return;
   }
 
@@ -223,9 +256,9 @@ async function main() {
     console.log(`Journal of ${journal.owner}, edition ${journal.sequence}, updated ${journal.updatedAt}`);
     if (feed) {
       console.log(`found at feed index ${feed.index} (chunk ${feed.address})`);
-      if (feed.signer === journal.owner.replace(/^0x/i, '').toLowerCase()) console.log('pointer signature checks out: signed by the journal address');
-      else console.log(`WARNING: pointer signed by ${feed.signer ? '0x' + feed.signer : 'an unreadable signature'}, not the journal address`);
+      if (feed.signer === owner) console.log('pointer signature checks out: signed by the journal address');
     }
+    for (const w of warnings) console.log(`WARNING: ${w}`);
     console.log('');
   }
   for (const s of sightings) {
@@ -238,7 +271,7 @@ async function main() {
     const sci = r.species.scientificName ? ` (${r.species.scientificName})` : '';
     console.log(`  ${r.observedOn}${r.observedTime ? ' ' + r.observedTime : ''}  ${r.species.commonName}${sci}${count}`);
     console.log(`      at ${r.place.name}${r.place.coordinates ? ` [${r.place.coordinates.lat}, ${r.place.coordinates.lon}, ${r.place.precision}]` : ''}`);
-    console.log(`      seen by ${r.observer.name}${r.photo ? `, photo ${r.photo.savedAs ?? r.photo.ref.slice(0, 12) + '…'}` : ''}`);
+    console.log(`      seen by ${r.observer.name}${r.photo ? `, photo ${r.photo.savedAs ?? r.photo.problem ?? r.photo.ref.slice(0, 12) + '…'}` : ''}`);
     if (r.notes) console.log(`      “${r.notes}”`);
   }
   console.log(`\n${sightings.filter((s) => !s.error).length} of ${sightings.length} sightings read from ${base}`);

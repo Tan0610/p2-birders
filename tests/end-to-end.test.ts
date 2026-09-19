@@ -71,6 +71,9 @@ it('warns when a pointer is not signed by the journal address', async () => {
     const loaded = await loadJournalByOwner(gw.url, seededHere.owner);
     expect(loaded.feed?.signer).toBe(other.owner);
     expect(loaded.warnings.join(' ')).toMatch(/signed by 0x/);
+    // The CLI reaches the same verdict on its own.
+    const { stdout } = await run(process.execPath, ['tools/read-sightings/read-sightings.mjs', '--owner', seededHere.owner, '--gateway', gw.url, '--json']);
+    expect(JSON.parse(stdout).warnings.join(' ')).toMatch(new RegExp(`signed by 0x${other.owner}`));
   } finally {
     await gw.close();
   }
@@ -81,6 +84,7 @@ describe('read-sightings CLI', () => {
     const { stdout } = await run(process.execPath, ['tools/read-sightings/read-sightings.mjs', '--owner', `0x${seeded.owner}`, '--gateway', gateway.url, '--json']);
     const out = JSON.parse(stdout);
     expect(out.feed.index).toBe('2');
+    expect(out.warnings).toEqual([]);
     expect(out.sightings).toHaveLength(6);
     expect(out.sightings.every((s: { record?: { format: string } }) => s.record?.format === 'org.deccanbirders.sighting')).toBe(true);
   });

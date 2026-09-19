@@ -15,3 +15,9 @@ node read-sightings.mjs --record <sighting reference> --gateway http://localhost
 
 The default endpoint is the public gateway, `https://api.gateway.ethswarm.org`.
 Any Bee API endpoint works.
+
+What it checks, from FORMAT.md: each feed update's identifier and 40-byte span, who signed it
+(it warns unless that is the address you asked for), that the journal's `owner` and `sequence`
+agree with the feed, each document's `format`, MAJOR version and required fields, and each
+photo's length against the record's `byteLength` before saving it. A record that fails is
+listed with its reason; the others still print.
