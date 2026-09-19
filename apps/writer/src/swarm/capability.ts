@@ -42,7 +42,8 @@ export async function checkUploadCapability(client: SwarmIdClient, route: Upload
   return { ok: true, uploadMode: info.uploadMode === 'user-stamp' ? 'user-stamp' : 'subsidised', info };
 }
 
-function reasonToCode(reason: string | undefined) {
+/** Maps Swarm ID's uploadUnavailableReason to the failure the user sees. */
+export function reasonToCode(reason: string | undefined) {
   switch (reason) {
     case 'no-stamp':
       return 'NO_DRIVE' as const;

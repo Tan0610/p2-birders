@@ -1,11 +1,12 @@
 import type { ConnectionInfo } from '@snaha/swarm-id';
 import { config } from '../config';
 import { type ErrorCode, MESSAGES } from '../errors';
+import { reasonToCode } from '../swarm/capability';
 import { type UploadRoute, describeRoute } from '../swarm/routes';
 
 export type Readiness =
   | { tone: 'wait'; text: string }
-  | { tone: 'ready'; text: string }
+  | { tone: 'ready'; text: string; subsidised: boolean }
   | { tone: 'blocked'; code: ErrorCode };
 
 /** What the sticky note says before anyone presses File. The real check runs again at upload time. */
@@ -21,13 +22,13 @@ export function readiness(opts: {
   const info = opts.info;
   if (!info?.identity) return { tone: 'blocked', code: 'NOT_SIGNED_IN' };
   if (!info.canUpload || info.uploadMode === 'unavailable') {
-    const r = info.uploadUnavailableReason as string | undefined;
-    return {
-      tone: 'blocked',
-      code: r === 'no-stamp' ? 'NO_DRIVE' : r === 'stamper-failed' ? 'STAMPER_FAILED' : r === 'stamp-expired' ? 'DRIVE_EXPIRED' : 'UPLOAD_UNAVAILABLE',
-    };
+    return { tone: 'blocked', code: reasonToCode(info.uploadUnavailableReason) };
   }
-  return { tone: 'ready', text: describeRoute(opts.route, info.uploadMode) };
+  return {
+    tone: 'ready',
+    text: describeRoute(opts.route, info.uploadMode),
+    subsidised: opts.route.kind === 'swarm-id' && info.uploadMode === 'subsidised',
+  };
 }
 
 export function CapabilityNote(props: {
@@ -56,6 +57,12 @@ export function CapabilityNote(props: {
             Change
           </button>
         </p>
+        {state.subsidised && (
+          <p className="sticky-line sticky-next">
+            Your Swarm ID has no drive yet, which is normal for a new account, so the gateway covers the cost. It decides how long it keeps what
+            it stamps; add a drive in Swarm ID when you want to pay for your own records.
+          </p>
+        )}
       </aside>
     );
   }

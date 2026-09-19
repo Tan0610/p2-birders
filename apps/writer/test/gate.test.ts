@@ -1,5 +1,6 @@
 import type { ConnectionInfo, SwarmIdClient } from '@snaha/swarm-id';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readiness } from '../src/components/CapabilityNote';
 import { publishJournal } from '../src/fileSighting';
 import { DEFAULT_ROUTE } from '../src/swarm/routes';
 import { createUploader } from '../src/swarm/uploader';
@@ -93,5 +94,20 @@ describe('journal publishing in one tab is serialised', () => {
     expect([a.feedIndex, b.feedIndex]).toEqual(['0', '1']);
     expect(writes.filter((w) => w.startsWith('feed@'))).toEqual(['feed@0', 'feed@1']);
     expect(feed).toHaveLength(2);
+  });
+});
+
+describe('what the note says before anyone presses File', () => {
+  const ready = (info: Partial<ConnectionInfo>) =>
+    readiness({ swarmId: 'ready', info: { canUpload: false, ...info } as ConnectionInfo, route: DEFAULT_ROUTE, online: true });
+
+  it('explains the free gateway to a first-time user with no drive', () => {
+    expect(ready({ identity, canUpload: true, uploadMode: 'subsidised' })).toMatchObject({ tone: 'ready', subsidised: true });
+    expect(ready({ identity, canUpload: true, uploadMode: 'user-stamp' })).toMatchObject({ tone: 'ready', subsidised: false });
+  });
+
+  it('blocks a signed-in user who cannot upload, with the same reason the gate gives', () => {
+    expect(ready({ identity, canUpload: false, uploadMode: 'unavailable', uploadUnavailableReason: 'no-stamp' })).toEqual({ tone: 'blocked', code: 'NO_DRIVE' });
+    expect(ready({ identity, canUpload: false, uploadMode: 'unavailable', uploadUnavailableReason: 'stamper-failed' })).toEqual({ tone: 'blocked', code: 'STAMPER_FAILED' });
   });
 });
