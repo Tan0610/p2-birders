@@ -13,7 +13,9 @@ import { FIELD_FOR_PATH, type FormState, emptyForm, toDraft } from './formModel'
 import { type PreparedPhoto, preparePhoto } from './photo';
 import { KEYS, load, remove, save } from './state/storage';
 import { useOnline, useSwarmId } from './state/useSwarmId';
+import { currentConnectionInfo, publishConnectionInfo } from './swarm/client';
 import { DEFAULT_ROUTE, type UploadRoute } from './swarm/routes';
+import { watchSignIn } from './swarm/signInWatch';
 
 export function App() {
   const swarm = useSwarmId();
@@ -34,6 +36,8 @@ export function App() {
   const [pending, setPending] = useState(pendingEntries);
   const [retrying, setRetrying] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  // A sign-in the Swarm ID window has been opened for but this page has not seen land yet.
+  const [signInWait, setSignInWait] = useState<{ attempt: number; stalled: boolean } | null>(null);
 
   // Keep the draft on this device so a dropped connection never loses a sighting.
   useEffect(() => save(KEYS.draft, form), [form]);
@@ -46,8 +50,31 @@ export function App() {
     setSeenIdentity(identityName);
     if (identityName && !form.observer) setForm({ ...form, observer: identityName });
   }
+  // Signed in (however the news arrived): nothing left to wait for.
+  if (identityName && signInWait) setSignInWait(null);
 
-  const state = readiness({ swarmId: swarm.status, info, route, online });
+  // connect() resolves when the Swarm ID window opens, not when the user finishes in it,
+  // so keep looking for the sign-in until it lands; see swarm/signInWatch.ts.
+  const signInAttempt = signInWait?.attempt ?? 0;
+  useEffect(() => {
+    if (!client || signInAttempt === 0) return;
+    return watchSignIn({
+      readInfo: currentConnectionInfo,
+      checkAuthStatus: () => client.checkAuthStatus(),
+      onSignedIn: publishConnectionInfo,
+      onStalled: () => setSignInWait((w) => (w && w.attempt === signInAttempt ? { ...w, stalled: true } : w)),
+      win: window,
+      doc: document,
+    });
+  }, [client, signInAttempt]);
+
+  const state = readiness({
+    swarmId: swarm.status,
+    info,
+    route,
+    online,
+    signIn: signInWait ? (signInWait.stalled ? 'stalled' : 'pending') : 'idle',
+  });
   const blockedReason = state.tone === 'blocked' ? MESSAGES[state.code].title : state.tone === 'wait' ? state.text : null;
 
   const onStep: StepListener = useCallback((step, s, note, progress) => {
@@ -59,6 +86,7 @@ export function App() {
     setSigningIn(true);
     try {
       await client.connect();
+      if (!currentConnectionInfo()?.identity) setSignInWait((w) => ({ attempt: (w?.attempt ?? 0) + 1, stalled: false }));
     } catch (err) {
       const f = classifyError(err, 'check');
       setFailure(f.code === 'UNKNOWN' ? new UploadFailure('POPUP_BLOCKED', { detail: f.detail, step: 'check' }) : f);

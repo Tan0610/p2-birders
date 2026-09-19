@@ -9,6 +9,7 @@ export type ErrorCode =
   | 'SWARM_ID_UNAVAILABLE'
   | 'POPUP_BLOCKED'
   | 'NOT_SIGNED_IN'
+  | 'SIGN_IN_NOT_RECEIVED'
   | 'NO_DRIVE'
   | 'STAMPER_FAILED'
   | 'DRIVE_EXPIRED'
@@ -55,6 +56,13 @@ export const MESSAGES: Record<ErrorCode, ErrorCopy> = {
     title: 'Sign in first',
     message: 'Sightings are stored under your own Swarm ID, so the journal needs to know who you are.',
     next: 'Sign in with Swarm ID. It takes a minute the first time and nothing to install.',
+    action: 'sign-in',
+  },
+  SIGN_IN_NOT_RECEIVED: {
+    title: 'This page has not heard from Swarm ID yet',
+    message:
+      'If the Swarm ID window said you are connected, your browser held that news back from this page. Some browsers only let the Swarm ID frame see a new sign-in after the page reloads.',
+    next: 'Reload this page to pick up your sign-in. Your notes are kept on this device; a photo you attached will need choosing again. If you closed the window before finishing, press Sign in.',
     action: 'sign-in',
   },
   NO_DRIVE: {

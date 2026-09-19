@@ -51,6 +51,11 @@ export function onConnectionChange(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
+/** Hands a snapshot read outside onConnectionChange (see signInWatch.ts) to the same listeners. */
+export function publishConnectionInfo(info: ConnectionInfo): void {
+  listeners.forEach((l) => l(info));
+}
+
 /** connectionInfo throws before initialize() finishes; this never does. */
 export function currentConnectionInfo(): ConnectionInfo | null {
   try {

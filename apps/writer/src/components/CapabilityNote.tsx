@@ -15,12 +15,18 @@ export function readiness(opts: {
   info: ConnectionInfo | null;
   route: UploadRoute;
   online: boolean;
+  /** Where a sign-in started from this page stands: the Swarm ID window is open, or the user came back and nothing arrived. */
+  signIn?: 'idle' | 'pending' | 'stalled';
 }): Readiness {
   if (!opts.online) return { tone: 'blocked', code: 'OFFLINE' };
   if (opts.swarmId === 'loading') return { tone: 'wait', text: 'Opening Swarm ID…' };
   if (opts.swarmId === 'failed') return { tone: 'blocked', code: 'SWARM_ID_UNAVAILABLE' };
   const info = opts.info;
-  if (!info?.identity) return { tone: 'blocked', code: 'NOT_SIGNED_IN' };
+  if (!info?.identity) {
+    if (opts.signIn === 'stalled') return { tone: 'blocked', code: 'SIGN_IN_NOT_RECEIVED' };
+    if (opts.signIn === 'pending') return { tone: 'wait', text: 'Waiting for Swarm ID. Finish signing in in the Swarm ID window.' };
+    return { tone: 'blocked', code: 'NOT_SIGNED_IN' };
+  }
   if (!info.canUpload || info.uploadMode === 'unavailable') {
     return { tone: 'blocked', code: reasonToCode(info.uploadUnavailableReason) };
   }
@@ -89,7 +95,7 @@ export function CapabilityNote(props: {
             Where uploads go
           </button>
         )}
-        {(state.code === 'SWARM_ID_UNAVAILABLE' || copy.action === 'open-swarm-id') && (
+        {(state.code === 'SWARM_ID_UNAVAILABLE' || state.code === 'SIGN_IN_NOT_RECEIVED' || copy.action === 'open-swarm-id') && (
           <button type="button" className="btn btn-small" onClick={props.onReload}>
             Reload
           </button>

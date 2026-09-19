@@ -110,4 +110,17 @@ describe('what the note says before anyone presses File', () => {
     expect(ready({ identity, canUpload: false, uploadMode: 'unavailable', uploadUnavailableReason: 'no-stamp' })).toEqual({ tone: 'blocked', code: 'NO_DRIVE' });
     expect(ready({ identity, canUpload: false, uploadMode: 'unavailable', uploadUnavailableReason: 'stamper-failed' })).toEqual({ tone: 'blocked', code: 'STAMPER_FAILED' });
   });
+
+  it('waits while the Swarm ID window is open, then offers a reload if nothing arrives', () => {
+    const signedOut = { canUpload: false } as ConnectionInfo;
+    const note = (signIn: 'idle' | 'pending' | 'stalled') => readiness({ swarmId: 'ready', info: signedOut, route: DEFAULT_ROUTE, online: true, signIn });
+    expect(note('idle')).toEqual({ tone: 'blocked', code: 'NOT_SIGNED_IN' });
+    expect(note('pending')).toMatchObject({ tone: 'wait' });
+    expect(note('stalled')).toEqual({ tone: 'blocked', code: 'SIGN_IN_NOT_RECEIVED' });
+  });
+
+  it('never lets a pending sign-in stand in for a signed-in user who cannot upload', () => {
+    const info = { identity, canUpload: false, uploadMode: 'unavailable', uploadUnavailableReason: 'no-stamp' } as ConnectionInfo;
+    expect(readiness({ swarmId: 'ready', info, route: DEFAULT_ROUTE, online: true, signIn: 'pending' })).toEqual({ tone: 'blocked', code: 'NO_DRIVE' });
+  });
 });
