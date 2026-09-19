@@ -1,0 +1,16 @@
+{
+  "description": "A complete journal feed update (FORMAT.md §3.2, §3.4): update 0 of the journal feed of owner, as GET /chunks/<socAddress> returns it. Signed once with a throwaway key that was then discarded; only the public owner address is kept.",
+  "owner": "f80b71c26f071455d837c5bd959aec084523b002",
+  "index": 0,
+  "timestamp": 1789351540,
+  "journalReference": "0b8f3a2c1d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5061728394a5b6c7d8e",
+  "identifier": "8cdb678c9ecd87da36fee3e677870c94dbe10dad4eee2917e7744dad8797e988",
+  "socAddress": "c982a96fef19d296958e7084ed6d218e26a0a93223b9681c614b61b82bb625cf",
+  "span": 40,
+  "payload": "000000006aa756740b8f3a2c1d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5061728394a5b6c7d8e",
+  "bmtRoot": "39c3cf3f26999e8829ee6b164c0ff85485911285ce38e543e7af83a0c0730f60",
+  "chunkAddress": "a140cab4fc31e259c7517c2ff4fcab5b879e231be430d24b7cd68f8bab51a722",
+  "signedDigest": "daf4a21bdec8e492aaa58361e54a54eac2ad7bdb37daf352476901177d60b6eb",
+  "signature": "25d7c422f481404a1ae5509f28230cb7eb46b3960588875b350f8c4ca4926da64e999cf011bb4b4ecf23d3a7c986cfec6fd670e2d80dea30a65ee056522216541b",
+  "chunk": "8cdb678c9ecd87da36fee3e677870c94dbe10dad4eee2917e7744dad8797e98825d7c422f481404a1ae5509f28230cb7eb46b3960588875b350f8c4ca4926da64e999cf011bb4b4ecf23d3a7c986cfec6fd670e2d80dea30a65ee056522216541b2800000000000000000000006aa756740b8f3a2c1d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5061728394a5b6c7d8e"
+}

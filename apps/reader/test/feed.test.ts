@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { JOURNAL_TOPIC_HEX, JOURNAL_TOPIC_STRING } from '@deccan-birders/format';
 import { bytesToHex, concatBytes, hexToBytes } from '@noble/hashes/utils.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadJournalByOwner } from '../src/journal';
 import { feedIdentifier, findLatestIndex, ownerBytes, parseFeedChunk, socAddress, topicFromString } from '../src/swarm/feed';
+import { bmtRoot, contentAddress, recoverFeedSigner } from '../src/swarm/verify';
 
 // The same vectors are printed in FORMAT.md §3.4. They were produced with
 // @ethersphere/bee-js 11.2.0 (makeFeedIdentifier / makeSOCAddress) and
@@ -135,5 +137,20 @@ describe('journal lookup says why it found nothing', () => {
   it('any other status is a gateway error with the status in it', async () => {
     answer(503);
     await expect(loadJournalByOwner('http://gw.test', owner)).rejects.toMatchObject({ code: 'GATEWAY_ERROR', message: expect.stringMatching(/503/) });
+  });
+});
+
+describe('FORMAT.md signed feed update vector', () => {
+  const v = JSON.parse(readFileSync(new URL('../../../packages/format/fixtures/feed-update.vector.json', import.meta.url), 'utf8')) as Record<string, string>;
+  const chunk = hexToBytes(v.chunk!);
+
+  it('addresses, payload and signer all match', () => {
+    const id = feedIdentifier(hexToBytes(JOURNAL_TOPIC_HEX), 0n);
+    expect(bytesToHex(id)).toBe(v.identifier);
+    expect(bytesToHex(socAddress(id, ownerBytes(v.owner!)))).toBe(v.socAddress);
+    expect(parseFeedChunk(chunk, id)).toEqual({ timestamp: Number(v.timestamp), journalRef: v.journalReference });
+    expect(bytesToHex(bmtRoot(hexToBytes(v.payload!)))).toBe(v.bmtRoot);
+    expect(bytesToHex(contentAddress(chunk.subarray(97, 105), hexToBytes(v.payload!)))).toBe(v.chunkAddress);
+    expect(recoverFeedSigner(chunk)).toBe(v.owner);
   });
 });

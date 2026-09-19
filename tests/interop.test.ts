@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { JOURNAL_TOPIC_HEX, JOURNAL_TOPIC_STRING } from '@deccan-birders/format';
@@ -51,5 +52,21 @@ describe('reader signature check agrees with bee-js 11', () => {
   it('does not attribute an unsigned chunk to anyone', () => {
     const chunk = new Uint8Array(145);
     expect(recoverFeedSigner(chunk)).toBeNull();
+  });
+});
+
+describe('the signed feed update vector in FORMAT.md §3.4 agrees with bee-js 11', () => {
+  const vector = JSON.parse(readFileSync(join(process.cwd(), 'packages/format/fixtures/feed-update.vector.json'), 'utf8')) as Record<string, string>;
+  const { makeContentAddressedChunk } = require(join(beeRoot, 'chunk/cac.js'));
+  const { unmarshalSingleOwnerChunk } = require(join(beeRoot, 'chunk/soc.js'));
+
+  it('chunk address (BMT) of the payload', () => {
+    expect(makeContentAddressedChunk(hexToBytes(vector.payload!)).address.toHex()).toBe(vector.chunkAddress);
+  });
+
+  it('bee-js accepts the chunk at its SOC address and recovers the same owner', () => {
+    const soc = unmarshalSingleOwnerChunk(hexToBytes(vector.chunk!), vector.socAddress);
+    expect(soc.owner.toHex()).toBe(vector.owner);
+    expect(recoverFeedSigner(hexToBytes(vector.chunk!))).toBe(vector.owner);
   });
 });

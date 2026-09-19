@@ -8,7 +8,8 @@ page, you can read every sighting without the app that wrote them. Almanac
 - Journal index: `org.deccanbirders.journal`, format version `1.0.0`
 - Machine-readable schemas: [`packages/format/schema/sighting.v1.schema.json`](packages/format/schema/sighting.v1.schema.json),
   [`packages/format/schema/journal.v1.schema.json`](packages/format/schema/journal.v1.schema.json) (JSON Schema 2020-12)
-- Example documents: [`packages/format/fixtures/`](packages/format/fixtures)
+- Example documents: [`packages/format/fixtures/`](packages/format/fixtures), including a complete signed
+  feed update ([`feed-update.vector.json`](packages/format/fixtures/feed-update.vector.json), §3.4)
 
 The words MUST, MUST NOT, SHOULD and MAY are used as in RFC 2119.
 
@@ -24,6 +25,9 @@ The words MUST, MUST NOT, SHOULD and MAY are used as in RFC 2119.
    - A reader MUST reject a document whose MAJOR version it does not know, and say so. It MUST NOT guess.
    - Within a known MAJOR, a reader MUST ignore fields it does not recognise.
    - A MINOR release only adds optional fields. A PATCH release only clarifies wording.
+   - A MINOR release never adds a value to an existing list of allowed values (`place.precision`,
+     `photo.contentType`, `photo.retrieval`) and never changes what a field means; either would be a
+     new MAJOR. So within 1.x a value outside those lists makes the document invalid.
 4. References are 64 hexadecimal characters and addresses are 40. Writers use lowercase without
    `0x`; readers MUST accept either case and an optional `0x`.
 5. Times are RFC 3339 in UTC (`2026-09-14T02:05:11Z`). Dates are `YYYY-MM-DD`.
@@ -54,6 +58,13 @@ At most 64 KiB once encoded. One JSON object:
 | `createdAt` | string | yes | RFC 3339 UTC, when the record was written |
 | `generator` | object | no | `{ "name", "version" }` of the writing software. Informational only; readers MUST NOT change behaviour on it |
 
+Rules a JSON Schema cannot express, which readers and writers MUST also apply:
+
+- `observedOn` is a real calendar date (`2026-02-30` is invalid) and is no later than one day after the
+  reader's current UTC date (the day of slack covers time zones).
+- A required text field that is empty or only whitespace counts as missing.
+- A document that breaks any rule is invalid as a whole. Readers report it and do not show a partial record.
+
 ### 2.1 Photo attachment
 
 A photo is stored separately, as the raw image bytes (bytes upload), and the record types it:
@@ -66,7 +77,11 @@ A photo is stored separately, as the raw image bytes (bytes upload), and the rec
 | `byteLength` | integer | yes | size of the stored image; readers SHOULD check it |
 | `width`, `height` | integer | no | pixels |
 
-The bytes carry no filename and no content type of their own. Use `contentType` from the record.
+The bytes carry no filename and no content type of their own. Use `contentType` from the record:
+a reader MUST type the bytes with it (for example as a `Blob` of that type) and MUST NOT guess the type
+from the bytes. A reader SHOULD refuse to show a photo whose length differs from `byteLength`, and say
+so. Photos are public like everything else, so writers SHOULD strip embedded metadata (EXIF, GPS)
+before uploading; the Field Journal re-encodes every photo for that reason.
 
 ### 2.2 Example
 
@@ -100,6 +115,8 @@ reading depends on that; any key can publish a journal.
 
 ### 3.1 Journal index: `org.deccanbirders.journal` 1.0.0
 
+Every field below is required. `previous` is required too, and is `null` for the first edition.
+
 | Field | Type | Rules |
 |---|---|---|
 | `format` | string | exactly `org.deccanbirders.journal` |
@@ -112,7 +129,7 @@ reading depends on that; any key can publish a journal.
 | `entries` | array | newest first, unique by `id` |
 | `entries[].ref` | string | 64-hex reference of the sighting record bytes |
 | `entries[].id` | string | the record's `id` |
-| `entries[].commonName`, `entries[].observedOn` | string | summary only; the record is authoritative |
+| `entries[].commonName`, `entries[].observedOn` | string | summary only (`observedOn` is `YYYY-MM-DD`); where it differs from the record, the record wins |
 | `entries[].hasPhoto` | boolean | summary only |
 | `entries[].addedAt` | string | RFC 3339 UTC |
 
@@ -142,10 +159,24 @@ Rules:
 
 1. Updates start at index 0 and have no gaps. The latest update is the highest `i` that exists.
 2. A reader MUST check that the returned identifier equals `identifier_i` and that the span is 40.
-3. A reader MAY verify the signature: it is the owner's secp256k1 signature, with the Ethereum
-   signed-message prefix, over `keccak256(identifier ‖ chunkAddress)`, where `chunkAddress` is the
-   BMT hash of `span ‖ payload`. The recovered address must equal `owner`. Almanac and
-   `read-sightings` both do this and warn when it does not match.
+3. A reader MAY verify the signature, and SHOULD warn when it does not match. Almanac and
+   `read-sightings` both do this:
+
+   ```
+   bmtRoot      = binary Merkle root of payload zero-padded to 4096 bytes: split it into 128
+                  segments of 32 bytes, then repeatedly replace each adjacent pair (a, b) with
+                  keccak256(a ‖ b) until one 32-byte value is left
+   chunkAddress = keccak256(span ‖ bmtRoot)                          span = the 8 bytes from the chunk
+   digest       = keccak256(identifier ‖ chunkAddress)
+   signed       = keccak256(utf8("Ethereum Signed Message:
+32") ‖ digest)
+   signature    = r (32 bytes) ‖ s (32 bytes) ‖ v (1 byte, 27 or 28; treat 0 or 1 the same way)
+   signer       = last 20 bytes of keccak256(uncompressed public key recovered from signature and signed,
+                  without its leading 0x04 byte)
+   ```
+
+   The signer must equal the `owner` you looked up. (A Bee node refuses to store a single-owner chunk
+   whose signature does not match its address, so a mismatch means the gateway itself is misbehaving.)
 4. The journal's own `sequence` SHOULD equal `i`, and its `owner` SHOULD equal the address you
    looked up. Warn if they differ.
 
@@ -162,6 +193,10 @@ Rules:
 4. for each entry: record = GET /bytes/<entry.ref>, check format + major version + rules above
 5. for each record with a photo: GET /bytes/<photo.ref>, typed by photo.contentType
 ```
+
+A record that cannot be fetched, or fails validation, MUST NOT hide the others: show the rest and
+say which entry failed and why. Documents of any size are read the same way; `GET /bytes` reassembles
+content larger than one chunk.
 
 The public gateway `https://api.gateway.ethswarm.org` serves all of these to browsers from any
 origin. It does not expose the `swarm-feed-index` response headers across origins, which is why
@@ -180,6 +215,23 @@ For `owner = 1234567890abcdef1234567890abcdef12345678`:
 These were produced with `@ethersphere/bee-js` 11.2.0 (`makeFeedIdentifier`, `makeSOCAddress`)
 and, separately, with `@noble/hashes`. `apps/reader/test/feed.test.ts` and
 `tests/interop.test.ts` assert them.
+
+A complete signed update, for testing a parser and signature check end to end, is in
+[`packages/format/fixtures/feed-update.vector.json`](packages/format/fixtures/feed-update.vector.json).
+It is update 0 of owner `f80b71c26f071455d837c5bd959aec084523b002` (signed once with a throwaway key
+that was then discarded), pointing at journal
+`0b8f3a2c1d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5061728394a5b6c7d8e` with timestamp `1789351540`
+(2026-09-14T02:05:40Z):
+
+| Value | Hex |
+|---|---|
+| `socAddress_0` | `c982a96fef19d296958e7084ed6d218e26a0a93223b9681c614b61b82bb625cf` |
+| `bmtRoot` of the 40-byte payload | `39c3cf3f26999e8829ee6b164c0ff85485911285ce38e543e7af83a0c0730f60` |
+| `chunkAddress` | `a140cab4fc31e259c7517c2ff4fcab5b879e231be430d24b7cd68f8bab51a722` |
+| `digest` (before the prefix) | `daf4a21bdec8e492aaa58361e54a54eac2ad7bdb37daf352476901177d60b6eb` |
+
+The file also holds the signature and the full 145-byte chunk exactly as `GET /chunks` returns it.
+bee-js's own `unmarshalSingleOwnerChunk` accepts it at `socAddress_0` (`tests/interop.test.ts`).
 
 ## 4. Where each object lives
 
@@ -211,6 +263,18 @@ The reference apps accept these query strings, and other apps are encouraged to 
 - `?record=<sighting reference>`
 - `&gateway=<Bee API URL>` to read through a particular node
 
-## 6. Changes
+## 6. Writing a reader: checklist
+
+1. Topic: `keccak256(utf8("org.deccanbirders.sighting/journal/v1"))`; check your value against §3.2.
+2. Latest index: probe `GET /chunks/<socAddress_i>` as in §3.3; check identifier and span (§3.2 rules 1–2).
+3. Journal: `GET /bytes/<payload[8..40]>`; check `format`, the MAJOR of `formatVersion`, and §3.1.
+4. Records: `GET /bytes/<entry.ref>`; check `format`, MAJOR, §2 and the rules below its table. Ignore unknown fields.
+5. Photos: `GET /bytes/<photo.ref>`; type by `contentType`, compare with `byteLength` (§2.1).
+6. Report each failure on its own, in words, and keep showing everything that did load.
+7. Test against the fixtures: `sighting.valid`, `sighting.minimal` and `sighting.future-minor` must be
+   accepted, `sighting.invalid` rejected as invalid, `sighting.v2` rejected as an unknown MAJOR, and
+   `feed-update.vector` parsed to its journal reference and signer.
+
+## 7. Changes
 
 - 1.0.0: first version.
