@@ -596,6 +596,85 @@ code,
   color: var(--on-board-soft);
 }
 
+/* ---------- take these records elsewhere: a parcel label ---------- */
+
+.takeaway {
+  position: relative;
+  max-width: 48rem;
+  margin: 3rem 0 0;
+  padding: 1.2rem 1.4rem 1.1rem 3.2rem;
+  background-color: var(--slip);
+  background-image: var(--pulp);
+  color: var(--ink);
+  border-radius: 4px 18px 4px 4px;
+  box-shadow: 3px 4px 0 rgb(0 0 0 / 0.35);
+  transform: rotate(-0.4deg);
+}
+/* the punched eyelet, with its bit of string */
+.takeaway::before {
+  content: '';
+  position: absolute;
+  left: 1.1rem;
+  top: 1.35rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: var(--board);
+  box-shadow: 0 0 0 3px var(--sheet-edge);
+}
+.takeaway::after {
+  content: '';
+  position: absolute;
+  left: -1.6rem;
+  top: 1.7rem;
+  width: 3.2rem;
+  border-top: 2px solid var(--mustard);
+  transform: rotate(-14deg);
+  transform-origin: right;
+}
+.takeaway h2 {
+  margin: 0 0 0.4rem;
+  font: italic 700 1.5rem/1.2 var(--font-serif);
+}
+.takeaway p {
+  margin: 0 0 0.9rem;
+  color: var(--ink-soft);
+}
+.takeaway-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+.takeaway .button-quiet {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.takeaway .button-quiet:hover:not(:disabled) {
+  background: rgb(35 31 25 / 0.07);
+}
+.takeaway .button:disabled {
+  cursor: not-allowed;
+}
+.takeaway :focus-visible {
+  outline-color: var(--rust);
+}
+.takeaway .takeaway-note {
+  margin: 0;
+  font: italic 400 1rem/1.4 var(--font-serif);
+}
+
+@media (max-width: 560px) {
+  .takeaway {
+    padding-left: 1.2rem;
+    transform: none;
+  }
+  .takeaway::before,
+  .takeaway::after {
+    display: none;
+  }
+}
+
 /* ---------- provenance ---------- */
 
 .provenance {

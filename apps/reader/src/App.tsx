@@ -6,6 +6,7 @@ import { Provenance } from './components/Provenance';
 import { SightingDetail } from './components/SightingDetail';
 import { SightingSheet } from './components/SightingSheet';
 import { StatusNotice } from './components/StatusNotice';
+import { TakeAway } from './components/TakeAway';
 import { type LoadedJournal, type SightingResult, loadJournalByOwner, loadJournalByRef, loadSighting, loadSightings } from './journal';
 import { ReaderError, normaliseBase } from './swarm/http';
 
@@ -314,6 +315,8 @@ function JournalView(props: {
               ),
             )}
           </ul>
+
+          <TakeAway gateway={props.gateway} loaded={loaded} results={results} done={done} />
         </>
       )}
 
