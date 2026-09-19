@@ -59,26 +59,26 @@ export const MESSAGES: Record<ErrorCode, ErrorCopy> = {
   },
   NO_DRIVE: {
     title: 'Your Swarm ID has no storage yet',
-    message: 'New Swarm ID accounts start without a drive (a postage stamp), and this page has no free gateway configured to cover them.',
-    next: 'Add a drive in Swarm ID, or turn the public gateway back on in Where uploads go.',
+    message: 'New Swarm ID accounts start without a drive (a postage stamp) to pay for uploads, and no free gateway is covering for it here right now.',
+    next: 'Add a drive in Swarm ID, then reload this page (what you have written is kept). Your own Bee node cannot replace it: the journal pointer is always signed and sent through Swarm ID.',
     action: 'open-swarm-id',
   },
   STAMPER_FAILED: {
     title: 'Your drive would not open',
     message: 'Swarm ID found your drive but could not prepare it for signing uploads.',
-    next: 'Open Swarm ID and check the drive under Storage, or use the public gateway for now.',
+    next: 'Open Swarm ID and check the drive under Storage, then reload this page (what you have written is kept).',
     action: 'open-swarm-id',
   },
   DRIVE_EXPIRED: {
     title: 'Your drive has expired',
     message: 'The postage stamp behind your Swarm ID drive ran out, so new uploads cannot be paid for.',
-    next: 'Top up or replace the drive in Swarm ID.',
+    next: 'Top up or replace the drive in Swarm ID, then reload this page (what you have written is kept).',
     action: 'open-swarm-id',
   },
   UPLOAD_UNAVAILABLE: {
     title: 'Uploads are switched off for this session',
     message: 'Swarm ID says this session cannot upload, for a reason this app does not recognise.',
-    next: 'Open Swarm ID to check your account, then reload this page.',
+    next: 'Open Swarm ID to check your account, then reload this page (what you have written is kept).',
     action: 'open-swarm-id',
   },
   LOCAL_NODE_UNREACHABLE: {

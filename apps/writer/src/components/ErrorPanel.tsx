@@ -74,7 +74,7 @@ export function ErrorPanel(props: {
             Open Swarm ID
           </a>
         )}
-        {(copy.action === 'open-route-settings' || copy.action === 'open-swarm-id') && (
+        {copy.action === 'open-route-settings' && (
           <button type="button" className="link-button" onClick={props.onOpenRoute}>
             Where uploads go
           </button>

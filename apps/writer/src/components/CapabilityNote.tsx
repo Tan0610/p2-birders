@@ -77,12 +77,12 @@ export function CapabilityNote(props: {
             Open Swarm ID
           </a>
         )}
-        {(copy.action === 'open-swarm-id' || copy.action === 'open-route-settings') && (
+        {copy.action === 'open-route-settings' && (
           <button type="button" className="link-button" onClick={props.onOpenRoute}>
             Where uploads go
           </button>
         )}
-        {state.code === 'SWARM_ID_UNAVAILABLE' && (
+        {(state.code === 'SWARM_ID_UNAVAILABLE' || copy.action === 'open-swarm-id') && (
           <button type="button" className="btn btn-small" onClick={props.onReload}>
             Reload
           </button>
