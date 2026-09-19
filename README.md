@@ -115,8 +115,12 @@ Every row names the code a reviewer should open, and how the repo stops it regre
 ## Things worth knowing
 
 - **First-time users.** A new Swarm ID has no drive. With the subsidised gateway configured (the
-  default), `uploadMode` is `subsidised` and filing works. Set `VITE_SUBSIDISED_GATEWAY_URL=` to empty
-  and you get the `NO_DRIVE` state, with File disabled and a link to add a drive. No request is made.
+  default), `uploadMode` is `subsidised`, filing works, and the note above the form says why: no drive
+  yet, so the gateway is covering the cost and decides how long it keeps the data. Any signed-in user
+  with `canUpload: false` (set `VITE_SUBSIDISED_GATEWAY_URL=` to empty to see it) gets a note naming the
+  reason (`NO_DRIVE`, `DRIVE_EXPIRED`, `STAMPER_FAILED` or `UPLOAD_UNAVAILABLE`), File disabled with that
+  reason beside it, an Open Swarm ID button to fix the drive and a Reload button. No request is made.
+  (A Bee node of your own cannot stand in: the journal pointer is always sent through Swarm ID.)
 - **The gateway's limits.** It ignores any batch ID you send and refuses the `Swarm-Pin`/`Swarm-Tag`
   headers (the browser reports only "Failed to fetch"). How long it keeps gateway-stamped data is its
   operator's decision. Records that must last should go through your own drive or node.
