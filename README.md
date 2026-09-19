@@ -12,9 +12,11 @@ never seen the writer, and carry it out to the wider biodiversity world as Darwi
 | Field Journal (writer) | https://deccan-field-journal.vercel.app |
 | Almanac (independent reader, its own origin) | https://deccan-almanac.vercel.app |
 
-> **Live proof: journal address — filled after first live filing.**
-> Journal address: `0x…` (not yet filled) · open it in Almanac: `https://deccan-almanac.vercel.app/?owner=0x…`
-> · or run `npm run read -- --owner 0x…`
+> **Live proof: a real sighting filed through the live writer (Swarm ID, subsidised public gateway).**
+> Journal address: `0xee8925d7799c604e8f8501774e619fbe674cf2f7` · open it in Almanac:
+> [deccan-almanac.vercel.app/?owner=0xee89…f2f7](https://deccan-almanac.vercel.app/?owner=0xee8925d7799c604e8f8501774e619fbe674cf2f7)
+> · or run `npm run read -- --owner 0xee8925d7799c604e8f8501774e619fbe674cf2f7`
+> · refs, signature check and Darwin Core export: [docs/LIVE_EVIDENCE.md](docs/LIVE_EVIDENCE.md)
 
 **The independence proof: three readers, none of which imports the writer.**
 
