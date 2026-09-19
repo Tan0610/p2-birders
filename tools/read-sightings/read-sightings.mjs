@@ -7,6 +7,7 @@
 // description are enough to read everything back.
 //
 //   node read-sightings.mjs --owner <40-hex journal address> [--gateway URL] [--json] [--photos DIR]
+//   node read-sightings.mjs --owner <40-hex journal address> --dwc [--out sightings.csv]
 //   node read-sightings.mjs --journal <64-hex ref> [...]
 //   node read-sightings.mjs --record <64-hex ref> [...]
 
@@ -34,6 +35,8 @@ const { values } = parseArgs({
     gateway: { type: 'string', default: DEFAULT_GATEWAY },
     hint: { type: 'string' },
     json: { type: 'boolean', default: false },
+    dwc: { type: 'boolean', default: false },
+    out: { type: 'string' },
     photos: { type: 'string' },
     help: { type: 'boolean', short: 'h', default: false },
   },
@@ -48,11 +51,105 @@ if (values.help || (!values.owner && !values.journal && !values.record)) {
   --gateway <url>    Bee API endpoint (default ${DEFAULT_GATEWAY})
   --hint <n>         a feed index to start the search from
   --photos <dir>     save attached photos into this folder
-  --json             print machine-readable JSON`);
+  --json             print machine-readable JSON
+  --dwc              print a Darwin Core occurrence CSV (FORMAT.md "Mapping to Darwin Core")
+  --out <file>       write the --dwc or --json output to this file instead of stdout`);
   process.exit(values.help ? 0 : 1);
 }
 
 const base = values.gateway.replace(/\/+$/, '');
+
+// ---------- Darwin Core, from FORMAT.md "Mapping to Darwin Core" ----------
+// This tool's own copy of the mapping (it imports nothing from the repository).
+// tests/dwc-parity.test.ts holds it and packages/format to the same golden file.
+
+const DWC_TERMS = [
+  'occurrenceID', 'basisOfRecord', 'occurrenceStatus', 'datasetName', 'modified', 'scientificName', 'vernacularName',
+  'individualCount', 'eventDate', 'locality', 'decimalLatitude', 'decimalLongitude', 'geodeticDatum',
+  'coordinateUncertaintyInMeters', 'coordinatePrecision', 'informationWithheld', 'dataGeneralizations', 'recordedBy',
+  'occurrenceRemarks', 'associatedMedia', 'references', 'dynamicProperties',
+];
+const bare = (v) => String(v).replace(/^0x/i, '').toLowerCase();
+const decimal = (n) => (/e/i.test(String(n)) ? n.toFixed(12).replace(/\.?0+$/, '') : String(n));
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// The UTC offset of a local date and time in an IANA zone, or undefined (unknown zone, DST gap, odd offset).
+function utcOffset(timeZone, date, time) {
+  const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const t = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!d || !t || !String(timeZone).trim()) return undefined;
+  let fmt;
+  try {
+    fmt = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch {
+    return undefined;
+  }
+  const wallAt = (at) => {
+    const p = {};
+    for (const part of fmt.formatToParts(new Date(at))) if (part.type !== 'literal') p[part.type] = Number(part.value);
+    return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  };
+  const wall = Date.UTC(Number(d[1]), Number(d[2]) - 1, Number(d[3]), Number(t[1]), Number(t[2]));
+  let instant = wall - (wallAt(wall) - wall);
+  instant = wall - (wallAt(instant) - instant);
+  if (wallAt(instant) !== wall) return undefined;
+  const minutes = (wall - instant) / 60000;
+  if (!Number.isInteger(minutes)) return undefined;
+  const abs = Math.abs(minutes);
+  return `${minutes < 0 ? '-' : '+'}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
+}
+
+function toDwc(r, recordRef, gateway, journalOwner) {
+  const owner = journalOwner ? bare(journalOwner) : undefined;
+  const offset = r.observedTime && r.timeZone ? utcOffset(r.timeZone, r.observedOn, r.observedTime) : undefined;
+  const out = {
+    occurrenceID: `urn:uuid:${String(r.id).toLowerCase()}`,
+    basisOfRecord: 'HumanObservation',
+    occurrenceStatus: 'present',
+    datasetName: owner ? `Deccan Birders journal 0x${owner}` : 'Deccan Birders sightings',
+    modified: r.createdAt,
+    scientificName: r.species.scientificName,
+    vernacularName: r.species.commonName,
+    individualCount: r.count === undefined ? undefined : String(r.count),
+    eventDate: r.observedTime ? `${r.observedOn}T${r.observedTime}${offset ?? ''}` : r.observedOn,
+    locality: r.place.name,
+    recordedBy: r.observer.name,
+    occurrenceRemarks: r.notes,
+    associatedMedia: r.photo ? `${gateway}/bytes/${bare(r.photo.ref)}` : undefined,
+    references: `${gateway}/bytes/${bare(recordRef)}`,
+  };
+  const c = r.place.coordinates;
+  if (r.place.precision !== 'none' && c) {
+    const approximate = r.place.precision === 'approximate';
+    out.decimalLatitude = decimal(approximate ? round2(c.lat) : c.lat);
+    out.decimalLongitude = decimal(approximate ? round2(c.lon) : c.lon);
+    out.geodeticDatum = 'WGS84';
+    if (approximate) {
+      out.coordinateUncertaintyInMeters = '1000';
+      out.coordinatePrecision = '0.01';
+      out.informationWithheld = 'Precise coordinates withheld by the observer; published rounded to 2 decimal places (about 1 km).';
+      out.dataGeneralizations = 'Coordinates rounded to 2 decimal places before publication.';
+    }
+  } else {
+    out.informationWithheld = 'Coordinates not shared by the observer; only the place name is given.';
+  }
+  out.dynamicProperties = JSON.stringify({
+    swarmRecordRef: bare(recordRef),
+    ...(owner ? { swarmJournalOwner: `0x${owner}` } : {}),
+    format: r.format,
+    formatVersion: r.formatVersion,
+    placePrecision: r.place.precision,
+    ...(r.timeZone ? { timeZone: r.timeZone } : {}),
+  });
+  return out;
+}
+
+// RFC 4180: header row, CRLF line endings, a field quoted when it holds , " CR or LF, with " doubled.
+const csvField = (v) => {
+  const s = v ?? '';
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+const dwcCsv = (rows) => `${[DWC_TERMS.join(','), ...rows.map((row) => DWC_TERMS.map((t) => csvField(row[t])).join(','))].join('\r\n')}\r\n`;
 
 async function get(path) {
   let res;
@@ -193,6 +290,8 @@ async function main() {
 
   const owner = values.owner ? hex(values.owner, 40, '--owner') : null;
   const warnings = [];
+  if (values.dwc && values.json) throw new Problem('choose one of --dwc and --json');
+  if (values.out && !values.dwc && !values.json) throw new Problem('--out writes the --dwc or --json output; add one of them');
 
   if (values.record) {
     refs = [hex(values.record, 64, '--record')];
@@ -247,8 +346,22 @@ async function main() {
     }
   }
 
-  if (values.json) {
-    console.log(JSON.stringify({ gateway: base, feed, journal, warnings, sightings }, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 2));
+  if (values.dwc || values.json) {
+    let text;
+    if (values.dwc) {
+      text = dwcCsv(sightings.filter((s) => !s.error).map((s) => toDwc(s.record, s.ref, base, journal?.owner)));
+      // The CSV holds only the records that read; everything else goes to stderr so the file stays clean.
+      for (const w of warnings) console.error(`WARNING: ${w}`);
+      for (const s of sightings.filter((x) => x.error)) console.error(`skipped ${s.ref}: ${s.error}`);
+    } else {
+      text = `${JSON.stringify({ gateway: base, feed, journal, warnings, sightings }, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 2)}\n`;
+    }
+    if (values.out) {
+      await writeFile(values.out, text, 'utf8');
+      console.error(`wrote ${values.out}`);
+    } else {
+      process.stdout.write(text);
+    }
     return;
   }
 
