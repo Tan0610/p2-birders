@@ -1,18 +1,23 @@
 #!/usr/bin/env node
+// DEV AND TEST ONLY. Not part of either app, never deployed, and nothing in
+// apps/ imports it. The Field Journal cannot upload to it.
+//
 // A small stand-in for a Bee gateway, for tests and for looking at the reader
-// without network access. It serves exactly the read endpoints FORMAT.md uses:
+// without network access. It serves exactly the read endpoints FORMAT.md uses,
+// with permissive CORS like the public gateway:
 //
 //   GET /bytes/<ref>     raw bytes
 //   GET /chunks/<addr>   single-owner chunks (journal feed updates)
 //
-// It is READ-ONLY and not part of either app: it has no upload endpoint and answers
-// every method other than GET (and the CORS preflight) with 405. Its sample data
-// is written straight into memory at start-up by seedSampleJournal() below.
+// It is READ-ONLY: it has no upload endpoint and answers every method other than
+// GET, HEAD and the CORS preflight with 405. Its sample data is written straight
+// into memory at start-up by seedSampleJournal() below, so it involves no write
+// path and no capability check.
 //
-// with permissive CORS, like the public gateway. References here are keccak256
-// of the content, not real Swarm BMT hashes; readers treat references as opaque,
-// so that difference does not matter to them. Feed updates are properly signed,
-// by a throwaway key made fresh each time the gateway starts.
+// References here are keccak256 of the content, not real Swarm BMT hashes;
+// readers treat references as opaque, so that difference does not matter to them.
+// Feed updates are properly signed, by a throwaway key made fresh each time the
+// gateway starts.
 //
 //   node scripts/mock-gateway.mjs            # seeded with a sample journal, port 4555
 //   node scripts/mock-gateway.mjs --port 0   # any free port

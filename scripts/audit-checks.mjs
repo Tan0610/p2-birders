@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Static self-audit. Re-checks, from the source, the guarantees this repo makes
-// (see README "How each requirement is met"). Fails with exit code 1 if any breaks.
+// (see README "How each check is met"). Fails with exit code 1 if any breaks.
 //
 //   node scripts/audit-checks.mjs
 
@@ -47,6 +47,10 @@ const check = (name, problems) => results.push({ name, problems });
     const src = read(f);
     if (uploadCall.test(src) || writeFactory.test(src)) problems.push(`${f} calls a Swarm write method`);
     if (/method:\s*['"](POST|PUT|PATCH|DELETE)['"]/i.test(src)) problems.push(`${f} sends a non-GET request`);
+  }
+  // The offline mock gateway is for tests and demos only; neither app may reach it.
+  for (const f of [...writerFiles, ...walk('apps/reader/src', ['.ts', '.tsx'])]) {
+    if (/mock-gateway/.test(read(f))) problems.push(`${f} refers to the dev-only mock gateway`);
   }
   const uploader = read('apps/writer/src/swarm/uploader.ts');
   const methods = (uploader.match(/^\s{4}async \w+\(/gm) ?? []).length;
