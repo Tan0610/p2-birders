@@ -1285,6 +1285,11 @@ code,
   .submit-row .btn-file {
     flex: 1 1 12rem;
   }
+  /* until you can file, the note above says why; keep the disabled button out of the way */
+  .submit-row:has(.btn-file:disabled) {
+    position: static;
+    box-shadow: none;
+  }
 }
 
 /* ---------- small screens ---------- */
