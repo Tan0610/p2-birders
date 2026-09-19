@@ -1,5 +1,57 @@
 # Deccan Birders: take your records with you
 
+## 60-second tour
+
+**What it is.** A birder files a sighting in the **Field Journal**; it is stored on Swarm under
+their own Swarm ID, as self-describing JSON (`format` + `formatVersion` inside the bytes), listed
+in a journal that a signed feed points to. Anyone can then read it back with software that has
+never seen the writer, and carry it out to the wider biodiversity world as Darwin Core.
+
+| Live | URL |
+|---|---|
+| Field Journal (writer) | https://deccan-field-journal.vercel.app |
+| Almanac (independent reader, its own origin) | https://deccan-almanac.vercel.app |
+
+> **Live proof: journal address — filled after first live filing.**
+> Journal address: `0x…` (not yet filled) · open it in Almanac: `https://deccan-almanac.vercel.app/?owner=0x…`
+> · or run `npm run read -- --owner 0x…`
+
+**The independence proof: three readers, none of which imports the writer.**
+
+| Reader | What it may import | Proof |
+|---|---|---|
+| **Almanac** ([`apps/reader`](apps/reader)) | only [`@deccan-birders/format`](packages/format) (zero runtime deps, no app code), React, `@noble/*` | ESLint `no-restricted-imports`; audit check 4 scans its sources, `package.json` and the built bundle |
+| **`read-sightings` CLI** ([`tools/read-sightings`](tools/read-sightings/read-sightings.mjs)) | **nothing** from this repo: one file, `node:*` and `@noble/*` only; it even carries its own copy of the Darwin Core mapping | audit check 4; [`tests/end-to-end.test.ts`](tests/end-to-end.test.ts), [`tests/dwc-parity.test.ts`](tests/dwc-parity.test.ts) |
+| **Any fourth app** | [`FORMAT.md`](FORMAT.md) + [JSON Schemas](packages/format/schema) + [fixtures and a signed feed-update test vector](packages/format/fixtures) | FORMAT.md §6 checklist; and §7 maps every record to [Darwin Core](https://dwc.tdwg.org/terms/), so GBIF, iNaturalist imports or a spreadsheet can take the records without any of our code |
+
+**Where each check lives** (full reasoning in [How each check is met](#how-each-check-is-met)):
+
+| # | Check | File → function | Enforced by |
+|---|---|---|---|
+| 1 | Every write gated on a capability check | [`apps/writer/src/swarm/uploader.ts`](apps/writer/src/swarm/uploader.ts) → `createUploader`, `gate`; [`swarm/capability.ts`](apps/writer/src/swarm/capability.ts) → `checkUploadCapability` | ESLint, audit 1, `apps/writer/test/gate.test.ts` |
+| 2 | Route for users with no stamp | [`apps/writer/src/swarm/client.ts`](apps/writer/src/swarm/client.ts) → `getSwarmId` (`subsidisedGatewayUrl`) | audit 2 |
+| 3 | Format name + version in the bytes | [`packages/format/src/codec.ts`](packages/format/src/codec.ts) → `encodeSighting`, `encodeJournal` | audit 3, `packages/format/test/format.test.ts` |
+| 4 | Reader does not import the writer | [`apps/reader/package.json`](apps/reader/package.json); [`apps/reader/src/journal.ts`](apps/reader/src/journal.ts) → `loadJournalByOwner` | ESLint, audit 4 |
+| 5 | Download endpoint matches upload | [`apps/reader/src/swarm/bytes.ts`](apps/reader/src/swarm/bytes.ts) → `downloadBytes`; [`swarm/feed.ts`](apps/reader/src/swarm/feed.ts) → `fetchFeedUpdate` | audit 5 |
+| 6 | No pin/tag toward the gateway | [`apps/writer/src/swarm/uploader.swarmId.ts`](apps/writer/src/swarm/uploader.swarmId.ts) → `uploadBytesViaSwarmId` (`pin?: never; tag?: never`) | the type, ESLint, audit 6 |
+| 7 | Failures show a specific reason | [`apps/writer/src/errors.ts`](apps/writer/src/errors.ts) → `classifyError`; [`components/ErrorPanel.tsx`](apps/writer/src/components/ErrorPanel.tsx) | audit 7, `apps/writer/test/writer.test.ts` |
+| 8 | No secrets in tracked files | [`.gitignore`](.gitignore), [`scripts/mock-gateway.mjs`](scripts/mock-gateway.mjs) → `createThrowawaySigner` | audit 8 |
+| + | Records leave as Darwin Core | [`packages/format/src/dwc.ts`](packages/format/src/dwc.ts) → `toDwcOccurrence`, `toDwcCsv`; Almanac [`components/TakeAway.tsx`](apps/reader/src/components/TakeAway.tsx); CLI `--dwc` | `packages/format/test/dwc.test.ts`, `tests/dwc-parity.test.ts` (CLI and package vs one golden CSV) |
+
+**Verify it yourself, no keys, no account** (after `npm install`):
+
+```sh
+npm run read -- --owner <addr>                         # every sighting in a journal, signature checked
+npm run read -- --owner <addr> --dwc                   # the same journal as a Darwin Core CSV
+npm run read -- --owner <addr> --dwc --out journal.csv # ...written to a file
+npm run audit:checks                                   # re-verifies checks 1-8 from the source and the built reader
+```
+
+No live address handy? `npm run mock:gateway` serves a signed sample journal offline and prints
+an address to use with `--gateway http://127.0.0.1:4555`.
+
+---
+
 The Deccan Birders have kept sighting records since 1998 and lost them to three apps: a forum that
 closed, a Facebook group that ate the photos, and a birding app that was bought, shut down, and
 left a CSV where the location column said "near the usual spot".
@@ -64,6 +116,7 @@ npm run dev:reader     # Almanac on http://localhost:5174 (a different origin on
 
 npm run read -- --owner 0x<journal address>          # the command-line reader
 npm run read -- --owner 0x<journal address> --json --photos ./photos
+npm run read -- --owner 0x<journal address> --dwc --out journal.csv   # Darwin Core CSV (FORMAT.md §7)
 ```
 
 No node and no gift code are needed: sign in with Swarm ID and the subsidised gateway covers the
@@ -90,7 +143,7 @@ throwaway key it makes at start-up. Nothing it serves is a real sighting.
 ```sh
 npm run typecheck      # tsc, all workspaces
 npm run lint           # eslint, including rules that keep the reader independent
-npm test               # vitest: format rules, feed vectors, capability gate, error mapping, bee-js interop, end-to-end readers
+npm test               # vitest: format rules, Darwin Core mapping, feed vectors, capability gate, error mapping, bee-js interop, end-to-end readers
 npm run build          # both apps
 npm run audit:checks   # re-verifies the checks below from the source (and the built reader bundle)
 npm run check          # all of the above
@@ -176,7 +229,7 @@ when filing real sightings.
 ```
 FORMAT.md                     the published format: read this to write a fourth app
 packages/format/              standalone format definition: constants, types, validators, codec,
-                              JSON Schemas, fixtures. Zero runtime dependencies.
+                              JSON Schemas, fixtures, Darwin Core mapping (src/dwc.ts). Zero runtime dependencies.
 apps/writer/                  Field Journal (React, Vite, @snaha/swarm-id 0.4.1, @ethersphere/bee-js 11.2.0)
   src/swarm/client.ts         the one SwarmIdClient, with the subsidised gateway configured
   src/swarm/capability.ts     can this upload happen right now, and if not, why
@@ -193,6 +246,7 @@ scripts/audit-checks.mjs      re-checks the requirements from source
 scripts/mock-gateway.mjs      a seeded stand-in gateway (/bytes, /chunks) for tests and offline demos
 tests/interop.test.ts         the reader's feed maths and signature check against bee-js
 tests/end-to-end.test.ts      Almanac's loader and the CLI against the mock gateway
+tests/dwc-parity.test.ts      the CLI's --dwc and packages/format against one golden CSV
 ```
 
 ## Versions
