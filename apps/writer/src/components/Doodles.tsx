@@ -68,3 +68,17 @@ export function EmptyNest({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function Camera({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 64 48" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 16 C 6 13, 8 12, 11 12 L 20 12 L 24 6 L 40 6.5 L 44 12 L 54 12 C 57 12, 58.5 14, 58 17 L 57 39 C 57 42, 55 43, 52 43 L 11 42.5 C 8 42.5, 6.5 41, 6.5 38 Z" />
+        <circle cx="32" cy="27" r="10" />
+        <path d="M27 24 C 28 22, 30 21, 32 21" opacity=".55" />
+        <path d="M11 18 L 16 18" />
+        <path d="M49 17 L 52 17" opacity=".6" />
+      </g>
+    </svg>
+  );
+}
