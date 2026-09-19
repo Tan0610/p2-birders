@@ -1,10 +1,13 @@
 import type { SightingRecord } from '@deccan-birders/format';
 import { useEffect, useRef, useState } from 'react';
 import { loadPhotoUrl } from '../journal';
+import { ReaderError } from '../swarm/http';
+
+type PhotoState = { url: string | null; failed: false } | { url: null; failed: true; mismatch: boolean; reason: string };
 
 /** Lazily fetches the photo bytes and turns them into an object URL typed by the record. */
 export function usePhoto(gateway: string, record: SightingRecord | null, enabled = true) {
-  const [state, setState] = useState<{ url: string | null; failed: boolean }>({ url: null, failed: false });
+  const [state, setState] = useState<PhotoState>({ url: null, failed: false });
   useEffect(() => {
     if (!record?.photo || !enabled) return;
     const ctrl = new AbortController();
@@ -14,7 +17,12 @@ export function usePhoto(gateway: string, record: SightingRecord | null, enabled
         url = u;
         setState({ url: u, failed: false });
       })
-      .catch(() => !ctrl.signal.aborted && setState({ url: null, failed: true }));
+      .catch((err: unknown) => {
+        if (ctrl.signal.aborted) return;
+        // INVALID_DOCUMENT here means the bytes did not match the record's byteLength.
+        const mismatch = err instanceof ReaderError && err.code === 'INVALID_DOCUMENT';
+        setState({ url: null, failed: true, mismatch, reason: err instanceof Error ? err.message : String(err) });
+      });
     return () => {
       ctrl.abort();
       if (url) URL.revokeObjectURL(url);
@@ -55,7 +63,7 @@ export function SightingSheet(props: { gateway: string; record: SightingRecord; 
             {photo.url ? (
               <img src={photo.url} alt={`${record.species.commonName} at ${record.place.name}`} loading="lazy" />
             ) : (
-              <div className={`mount-wait ${photo.failed ? 'mount-failed' : ''}`}>{photo.failed ? 'Photo not reachable' : 'Developing…'}</div>
+              <div className={`mount-wait ${photo.failed ? 'mount-failed' : ''}`}>{photo.failed ? (photo.mismatch ? 'Photo does not match its record' : 'Photo not reachable') : 'Developing…'}</div>
             )}
           </div>
         )}

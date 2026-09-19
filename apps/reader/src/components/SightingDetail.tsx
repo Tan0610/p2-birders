@@ -27,7 +27,7 @@ export function SightingDetail(props: { gateway: string; record: SightingRecord;
             {photo.url ? (
               <img src={photo.url} alt={`${record.species.commonName} at ${record.place.name}`} />
             ) : (
-              <div className="mount-wait">{photo.failed ? 'The photo could not be fetched from this gateway.' : 'Developing…'}</div>
+              <div className="mount-wait">{photo.failed ? (photo.mismatch ? photo.reason : `The photo could not be fetched from this gateway: ${photo.reason}`) : 'Developing…'}</div>
             )}
           </figure>
         )}

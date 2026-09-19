@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { JOURNAL_TOPIC_HEX, JOURNAL_TOPIC_STRING } from '@deccan-birders/format';
+import { JOURNAL_TOPIC_HEX, JOURNAL_TOPIC_STRING, type SightingRecord } from '@deccan-birders/format';
 import { bytesToHex, concatBytes, hexToBytes } from '@noble/hashes/utils.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadJournalByOwner } from '../src/journal';
+import { loadJournalByOwner, loadPhotoUrl } from '../src/journal';
 import { feedIdentifier, findLatestIndex, ownerBytes, parseFeedChunk, socAddress, topicFromString } from '../src/swarm/feed';
 import { bmtRoot, contentAddress, recoverFeedSigner } from '../src/swarm/verify';
 
@@ -152,5 +152,17 @@ describe('FORMAT.md signed feed update vector', () => {
     expect(bytesToHex(bmtRoot(hexToBytes(v.payload!)))).toBe(v.bmtRoot);
     expect(bytesToHex(contentAddress(chunk.subarray(97, 105), hexToBytes(v.payload!)))).toBe(v.chunkAddress);
     expect(recoverFeedSigner(chunk)).toBe(v.owner);
+  });
+});
+
+describe('photos are checked against their record (FORMAT.md §2.1)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('refuses a photo whose length is not the byteLength the record gives', async () => {
+    vi.stubGlobal('fetch', async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+    const record = {
+      photo: { ref: 'ab'.repeat(32), retrieval: 'bytes', contentType: 'image/jpeg', byteLength: 4 },
+    } as unknown as SightingRecord;
+    await expect(loadPhotoUrl('http://gw.test', record)).rejects.toMatchObject({ code: 'INVALID_DOCUMENT', message: expect.stringMatching(/3 bytes.*4/) });
   });
 });

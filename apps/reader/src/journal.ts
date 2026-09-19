@@ -97,10 +97,19 @@ export async function loadSightings(
   await Promise.all(Array.from({ length: Math.min(4, refs.length) }, worker));
 }
 
-/** Photos are raw bytes typed by the record, so the record's contentType names the Blob. */
+/**
+ * Photos are raw bytes typed by the record, so the record's contentType names the Blob
+ * (FORMAT.md §2.1). A photo whose length differs from the record's byteLength is refused.
+ */
 export async function loadPhotoUrl(base: string, record: SightingRecord, signal?: AbortSignal): Promise<string> {
   if (!record.photo) throw new ReaderError('BAD_INPUT', 'This sighting has no photo.');
   const bytes = await downloadBytes(base, normaliseHex(record.photo.ref), signal);
+  if (bytes.byteLength !== record.photo.byteLength) {
+    throw new ReaderError(
+      'INVALID_DOCUMENT',
+      `The photo stored there is ${bytes.byteLength} bytes, but the sighting says it is ${record.photo.byteLength}, so it is not shown.`,
+    );
+  }
   return URL.createObjectURL(new Blob([bytes as BlobPart], { type: record.photo.contentType }));
 }
 
