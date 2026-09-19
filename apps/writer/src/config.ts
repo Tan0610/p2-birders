@@ -18,9 +18,11 @@ function refuseWebsiteHost(url: string): string {
   return url;
 }
 
+const swarmIdOrigin = read('VITE_SWARM_ID_ORIGIN', 'https://swarm-id.snaha.net');
+
 export const config = {
   /** Where the Swarm ID identity iframe and sign-in popup are served from. */
-  swarmIdOrigin: read('VITE_SWARM_ID_ORIGIN', 'https://swarm-id.snaha.net'),
+  swarmIdOrigin,
   /**
    * The route for users who hold no postage stamp: the public gateway stamps
    * their uploads with its own batch. Empty string disables it.
@@ -30,8 +32,8 @@ export const config = {
   localBeeUrl: read('VITE_LOCAL_BEE_URL', 'http://localhost:1633'),
   /** The independent reader app, for "open in Almanac" links. */
   readerUrl: read('VITE_READER_URL', 'http://localhost:5174').replace(/\/+$/, ''),
-  /** Where users add a drive (postage batch) to their Swarm ID. */
-  swarmIdStorageUrl: 'https://swarm-id.snaha.net',
+  /** Where users add a drive (postage batch) to their Swarm ID: the same Swarm ID deployment they sign in with. */
+  swarmIdStorageUrl: swarmIdOrigin,
 } as const;
 
 export const APP_NAME = 'Deccan Birders Field Journal';
