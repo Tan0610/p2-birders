@@ -565,6 +565,34 @@ code,
   color: var(--ink-soft);
 }
 
+/* no photograph: no empty mount; the label takes the sheet, under a pencilled margin note */
+.sheet-bare .label-slip {
+  margin-left: 0;
+  width: 100%;
+}
+.no-photo {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.45rem;
+  margin: 0 0 0.55rem 0.1rem;
+  color: var(--ink-soft);
+  font: italic 400 1rem/1.1 var(--font-serif);
+  transform: rotate(-1.5deg);
+  transform-origin: left bottom;
+}
+.no-photo svg {
+  flex: 0 0 auto;
+  width: 3.6rem;
+  height: 2.25rem;
+  color: #6d6352;
+}
+.no-photo span {
+  padding-bottom: 0.25rem;
+}
+.no-photo-detail {
+  margin: 0.7rem 0 0.1rem;
+}
+
 .sheet-ghost {
   min-height: 12rem;
   opacity: 0.6;
@@ -742,6 +770,13 @@ code,
     grid-template-columns: 1.1fr 1fr;
     padding: 2.2rem;
   }
+  /* with no photograph there is no second column to hold open */
+  .detail-bare .detail-body {
+    grid-template-columns: 1fr;
+  }
+}
+.detail-bare {
+  width: min(40rem, calc(100vw - 1.5rem));
 }
 .detail-photo {
   margin: 0;

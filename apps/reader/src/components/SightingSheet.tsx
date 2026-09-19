@@ -2,6 +2,7 @@ import type { SightingRecord } from '@deccan-birders/format';
 import { useEffect, useRef, useState } from 'react';
 import { loadPhotoUrl } from '../journal';
 import { ReaderError } from '../swarm/http';
+import { NoPhotoNote } from './NoPhotoNote';
 
 type PhotoState = { url: string | null; failed: false } | { url: null; failed: true; mismatch: boolean; reason: string };
 
@@ -51,7 +52,7 @@ export function SightingSheet(props: { gateway: string; record: SightingRecord; 
   const tilt = ((props.index * 53) % 5) - 2;
 
   return (
-    <li className="sheet" style={{ ['--tilt' as string]: `${tilt * 0.6}deg` }}>
+    <li className={record.photo ? 'sheet' : 'sheet sheet-bare'} style={{ ['--tilt' as string]: `${tilt * 0.6}deg` }}>
       <article
         ref={articleRef}
         aria-labelledby={`s-${record.id}`}
@@ -67,6 +68,7 @@ export function SightingSheet(props: { gateway: string; record: SightingRecord; 
             )}
           </div>
         )}
+        {!record.photo && <NoPhotoNote />}
 
         <div className="label-slip">
           <h3 id={`s-${record.id}`}>

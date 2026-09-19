@@ -1,6 +1,7 @@
 import type { SightingRecord } from '@deccan-birders/format';
 import { useEffect, useRef } from 'react';
 import { bytesUrl } from '../swarm/bytes';
+import { NoPhotoNote } from './NoPhotoNote';
 import { formatDay, usePhoto } from './SightingSheet';
 
 export function SightingDetail(props: { gateway: string; record: SightingRecord; recordRef: string; onClose: () => void }) {
@@ -17,7 +18,7 @@ export function SightingDetail(props: { gateway: string; record: SightingRecord;
   const mapLink = coords ? `https://www.openstreetmap.org/?mlat=${coords.lat}&mlon=${coords.lon}#map=${record.place.precision === 'exact' ? 16 : 13}/${coords.lat}/${coords.lon}` : null;
 
   return (
-    <dialog ref={dialog} className="detail" onClose={props.onClose} aria-labelledby="detail-title">
+    <dialog ref={dialog} className={record.photo ? 'detail' : 'detail detail-bare'} onClose={props.onClose} aria-labelledby="detail-title">
       <button type="button" className="detail-close" onClick={() => dialog.current?.close()} aria-label="Close">
         Close
       </button>
@@ -34,6 +35,7 @@ export function SightingDetail(props: { gateway: string; record: SightingRecord;
         <div>
           <h2 id="detail-title">{record.species.commonName}</h2>
           {record.species.scientificName && <p className="sci">{record.species.scientificName}</p>}
+          {!record.photo && <NoPhotoNote className="no-photo-detail" />}
           <dl className="detail-facts">
             {record.count !== undefined && (
               <>
