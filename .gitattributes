@@ -1,3 +1,5 @@
 * text=auto eol=lf
 *.png binary
 *.jpg binary
+# RFC 4180 CSV uses CRLF; the Darwin Core golden file must be stored byte for byte.
+packages/format/fixtures/dwc/expected.csv -text

@@ -1,0 +1,126 @@
+{
+  "about": "Shared Darwin Core fixture. packages/format (toDwcCsv) and tools/read-sightings (--dwc) must both turn these records into expected.csv, byte for byte. Refs and the journal owner are made-up test values.",
+  "gateway": "https://api.gateway.ethswarm.org",
+  "journal": {
+    "format": "org.deccanbirders.journal",
+    "formatVersion": "1.0.0",
+    "owner": "f80b71c26f071455d837c5bd959aec084523b002",
+    "feedTopic": "org.deccanbirders.sighting/journal/v1",
+    "sequence": 0,
+    "previous": null,
+    "updatedAt": "2026-09-18T12:00:00Z",
+    "entries": []
+  },
+  "records": [
+    {
+      "ref": "1111111111111111111111111111111111111111111111111111111111111111",
+      "record": {
+        "format": "org.deccanbirders.sighting",
+        "formatVersion": "1.0.0",
+        "id": "3f6c2a9e-8b1d-4c7e-9a2f-5d0e1b7c4a61",
+        "species": { "commonName": "Indian Robin", "scientificName": "Copsychus fulicatus" },
+        "count": 2,
+        "observedOn": "2026-09-14",
+        "observedTime": "06:40",
+        "timeZone": "Asia/Kolkata",
+        "place": { "name": "Hussain Sagar lakeside scrub, Hyderabad", "precision": "approximate", "coordinates": { "lat": 17.42, "lon": 78.47 } },
+        "observer": { "name": "Meera" },
+        "notes": "Pair on the rocks by the path, male flicking his tail up.",
+        "photo": { "ref": "a3b1c9d27e4f5061728394a5b6c7d8e9f00112233445566778899aabbccddeef", "retrieval": "bytes", "contentType": "image/jpeg", "byteLength": 184233, "width": 1600, "height": 1067 },
+        "createdAt": "2026-09-14T02:05:11Z"
+      }
+    },
+    {
+      "ref": "2222222222222222222222222222222222222222222222222222222222222222",
+      "record": {
+        "format": "org.deccanbirders.sighting",
+        "formatVersion": "1.0.0",
+        "id": "9d8e7f60-1a2b-4c3d-8e4f-50617283a4b5",
+        "species": { "commonName": "Great Indian Bustard" },
+        "observedOn": "1998-01-11",
+        "place": { "name": "the usual spot near Nannaj", "precision": "none" },
+        "observer": { "name": "Kulkarni, R." },
+        "createdAt": "2026-09-15T10:00:00Z"
+      }
+    },
+    {
+      "ref": "3333333333333333333333333333333333333333333333333333333333333333",
+      "record": {
+        "format": "org.deccanbirders.sighting",
+        "formatVersion": "1.0.0",
+        "id": "0c1d2e3f-4a5b-4c6d-9e7f-8091a2b3c4d5",
+        "species": { "commonName": "Yellow-throated Bulbul", "scientificName": "Pycnonotus xantholaemus" },
+        "count": 3,
+        "observedOn": "2026-08-02",
+        "observedTime": "07:15",
+        "timeZone": "Asia/Kolkata",
+        "place": { "name": "Boulders above the Tungabhadra, Hampi", "precision": "exact", "coordinates": { "lat": 15.33512, "lon": 76.46234 } },
+        "observer": { "name": "Arjun" },
+        "notes": "Three, \"calling\" from the scrub.\nA fourth heard only; not counted.",
+        "createdAt": "2026-08-02T04:30:00Z"
+      }
+    },
+    {
+      "ref": "4444444444444444444444444444444444444444444444444444444444444444",
+      "record": {
+        "format": "org.deccanbirders.sighting",
+        "formatVersion": "1.0.0",
+        "id": "6a7b8c9d-0e1f-4a2b-9c3d-4e5f6a7b8c9d",
+        "species": { "commonName": "Eurasian Wren", "scientificName": "Troglodytes troglodytes" },
+        "count": 1,
+        "observedOn": "2026-06-01",
+        "observedTime": "05:10",
+        "timeZone": "Europe/London",
+        "place": { "name": "Regent's Park, London", "precision": "exact", "coordinates": { "lat": 51.52731, "lon": -0.15344 } },
+        "observer": { "name": "Farah" },
+        "createdAt": "2026-06-01T06:00:00Z"
+      }
+    },
+    {
+      "ref": "5555555555555555555555555555555555555555555555555555555555555555",
+      "record": {
+        "format": "org.deccanbirders.sighting",
+        "formatVersion": "1.0.0",
+        "id": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+        "species": { "commonName": "Northern Cardinal", "scientificName": "Cardinalis cardinalis" },
+        "observedOn": "2026-01-10",
+        "observedTime": "08:00",
+        "timeZone": "America/New_York",
+        "place": { "name": "Prospect Park, Brooklyn", "precision": "approximate", "coordinates": { "lat": 40.66179, "lon": -73.96934 } },
+        "observer": { "name": "Farah" },
+        "createdAt": "2026-01-10T14:00:00Z"
+      }
+    },
+    {
+      "ref": "6666666666666666666666666666666666666666666666666666666666666666",
+      "record": {
+        "format": "org.deccanbirders.sighting",
+        "formatVersion": "1.0.0",
+        "id": "c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f",
+        "species": { "commonName": "Spotted Owlet", "scientificName": "Athene brama" },
+        "observedOn": "2026-09-10",
+        "observedTime": "19:20",
+        "timeZone": "Mars/Olympus_Mons",
+        "place": { "name": "Old banyan by the Mula river footbridge, Pune", "precision": "none" },
+        "observer": { "name": "Meera" },
+        "createdAt": "2026-09-10T14:00:00Z"
+      }
+    },
+    {
+      "ref": "7777777777777777777777777777777777777777777777777777777777777777",
+      "record": {
+        "format": "org.deccanbirders.sighting",
+        "formatVersion": "1.0.0",
+        "id": "d3e4f5a6-b7c8-4d9e-8f0a-1b2c3d4e5f6a",
+        "species": { "commonName": "Painted Stork", "scientificName": "Mycteria leucocephala" },
+        "count": 14,
+        "observedOn": "2026-02-21",
+        "observedTime": "16:05",
+        "place": { "name": "Bhigwan backwaters", "precision": "approximate", "coordinates": { "lat": 18.3, "lon": 74.76 } },
+        "observer": { "name": "Meera" },
+        "notes": "=SUM(A1) is just what I wrote, not a formula",
+        "createdAt": "2026-02-21T09:12:00Z"
+      }
+    }
+  ]
+}
