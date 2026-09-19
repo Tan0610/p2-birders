@@ -275,6 +275,50 @@ The reference apps accept these query strings, and other apps are encouraged to 
    accepted, `sighting.invalid` rejected as invalid, `sighting.v2` rejected as an unknown MAJOR, and
    `feed-update.vector` parsed to its journal reference and signer.
 
-## 7. Changes
+## 7. Mapping to Darwin Core
 
-- 1.0.0: first version.
+This section is informative: it adds nothing to the format. It says how a sighting record becomes a
+[Darwin Core](https://dwc.tdwg.org/terms/) occurrence, the vocabulary GBIF, iNaturalist imports,
+museums and most biodiversity tools read, so records can leave Swarm without losing meaning.
+`toDwcOccurrence`/`toDwcCsv` in [`packages/format/src/dwc.ts`](packages/format/src/dwc.ts),
+Almanac's "Download Darwin Core CSV" and `read-sightings --dwc` all implement it, and all produce
+[`fixtures/dwc/expected.csv`](packages/format/fixtures/dwc/expected.csv) from
+[`fixtures/dwc/sightings.json`](packages/format/fixtures/dwc/sightings.json).
+
+| Term | From the record | Rule |
+|---|---|---|
+| `occurrenceID` | `id` | `urn:uuid:<id>` in lowercase. Stable across edits, so a re-import updates instead of duplicating |
+| `basisOfRecord` | | always `HumanObservation` |
+| `occurrenceStatus` | | always `present`: the format records birds seen, not searched-for and absent |
+| `datasetName` | journal `owner` | `Deccan Birders journal 0x<owner>`, or `Deccan Birders sightings` for a record opened on its own |
+| `modified` (dcterms) | `createdAt` | a stored record never changes, so when it was written is when it last changed |
+| `scientificName` | `species.scientificName` | empty if absent; nothing is guessed from the common name |
+| `vernacularName` | `species.commonName` | as the observer wrote it |
+| `individualCount` | `count` | empty if absent |
+| `eventDate` | `observedOn`, `observedTime`, `timeZone` | ISO 8601. `YYYY-MM-DD` alone if there is no time; `YYYY-MM-DDThh:mm` plus the UTC offset (`+05:30`) of `timeZone` on that date, if the time zone is present and known to the software. If the zone is absent or unknown, or the time falls in a daylight-saving gap, the offset is left off rather than guessed |
+| `locality` | `place.name` | |
+| `decimalLatitude`, `decimalLongitude` | `place.coordinates` | only when precision is not `none`. For `approximate`, rounded to 2 decimal places again on export, so a record that was not rounded is not published more precisely than its precision says |
+| `geodeticDatum` | | `WGS84` when there are coordinates |
+| `coordinateUncertaintyInMeters` | `place.precision` | `approximate`: `1000`. Rounding to 2 decimals moves a point at most 0.005° in each axis, 556 m north-south and at most 556 m east-west, so at most 786 m in a straight line; 1000 m covers that plus the unknown error of the original fix, and matches "about 1 km" in §2. `exact`: empty. The format does not record how accurate the fix was, and Darwin Core reads empty as "unknown" (zero is not allowed), which is better than an invented 30 m |
+| `coordinatePrecision` | `place.precision` | `0.01` for `approximate`; empty otherwise |
+| `informationWithheld` | `place.precision` | `approximate`: precise coordinates withheld, published rounded. `none`: coordinates not shared, place name only |
+| `dataGeneralizations` | `place.precision` | `approximate`: coordinates rounded to 2 decimal places before publication |
+| `recordedBy` | `observer.name` | |
+| `occurrenceRemarks` | `notes` | |
+| `associatedMedia` | `photo.ref` | `<gateway>/bytes/<photo.ref>`, the raw image bytes (§2.1); empty if there is no photo |
+| `references` (dcterms) | the record's own reference | `<gateway>/bytes/<record ref>`: the stored record itself, which anyone can re-read and re-validate |
+| `dynamicProperties` | | JSON: `swarmRecordRef`, `swarmJournalOwner` (if known), `format`, `formatVersion`, `placePrecision`, `timeZone` (if present), in that order. The Swarm provenance has no Darwin Core term of its own, and this is the term meant for such facts |
+
+`<gateway>` is the Bee API the records were read through (the public gateway by default); the
+bytes are the same on any node.
+
+The CSV follows RFC 4180: UTF-8 without a byte-order mark, one header row of the term names above in
+that order, one row per record, CRLF line endings, and a field wrapped in double quotes when it
+contains a comma, a double quote, CR or LF, with any double quote doubled. Every row has every
+column; an absent value is an empty field. Records that could not be read or failed validation are
+left out (and the tools say so), never exported half-filled.
+
+## 8. Changes
+
+- 1.0.0: first version. Later: §7, the Darwin Core mapping, added; it is informative and changes
+  nothing about the stored format.

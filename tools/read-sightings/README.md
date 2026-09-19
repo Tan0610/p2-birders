@@ -11,7 +11,15 @@ node read-sightings.mjs --owner 0x<journal address>
 node read-sightings.mjs --owner 0x<journal address> --photos ./photos --json
 node read-sightings.mjs --journal <journal reference>
 node read-sightings.mjs --record <sighting reference> --gateway http://localhost:1633
+node read-sightings.mjs --owner 0x<journal address> --dwc > sightings.csv
+node read-sightings.mjs --owner 0x<journal address> --dwc --out sightings.csv
 ```
+
+`--dwc` prints the sightings as a Darwin Core occurrence CSV (FORMAT.md §7), ready for GBIF or a
+spreadsheet; warnings and records that could not be read go to stderr, so the CSV stays clean.
+The mapping is this file's own copy, since the tool imports nothing from the repository;
+`tests/dwc-parity.test.ts` checks it against `packages/format` and the golden file
+`packages/format/fixtures/dwc/expected.csv`.
 
 The default endpoint is the public gateway, `https://api.gateway.ethswarm.org`.
 Any Bee API endpoint works.

@@ -16,6 +16,11 @@ It also recovers who signed each journal pointer (FORMAT.md §3.2, rule 3) and s
 in "How this page found the journal", with a warning if the signer is not the journal
 address you opened.
 
+Under the sheets, "Take these records elsewhere" downloads the journal as a Darwin Core
+occurrence CSV (FORMAT.md §7, for GBIF, iNaturalist imports or a spreadsheet) or as the original
+JSON documents. The file is built in the browser from `toDwcCsv` in the format package; nothing
+is uploaded.
+
 ```sh
 npm run dev:reader     # http://localhost:5174
 ```

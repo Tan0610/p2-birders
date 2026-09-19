@@ -29,6 +29,17 @@ else console.error(describeDecodeProblem(result));
 `not-json`, `wrong-format`, `unsupported-version` or `invalid` (with a list of
 field-level issues), so a reader can say exactly why a document was refused.
 
+## Take the records elsewhere: Darwin Core
+
+```ts
+import { toDwcCsv } from '@deccan-birders/format';
+
+const csv = toDwcCsv([{ ref, record }], { journalOwner }); // RFC 4180, header row of Darwin Core terms
+```
+
+`toDwcOccurrence` gives one occurrence as an object. The mapping, and why each term is
+filled the way it is, is FORMAT.md §7.
+
 ## Use it from anything else
 
 The JSON Schemas describe the same rules for any language:
