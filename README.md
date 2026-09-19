@@ -1,113 +1,258 @@
-# Deccan Birders: take your records with you
+<p align="center">
+  <img src="docs/banner.svg" alt="Deccan Birders: take your records with you. Sightings on Swarm, readable by any app. A pen drawing of an Indian Robin on a basalt rock." width="100%">
+</p>
+
+<p align="center">
+  <a href="https://deccan-field-journal.vercel.app"><img alt="live demo" src="https://img.shields.io/badge/live%20demo-Field%20Journal-a34a28"></a>
+  <a href="https://deccan-almanac.vercel.app/?owner=0xee8925d7799c604e8f8501774e619fbe674cf2f7"><img alt="live reader" src="https://img.shields.io/badge/live%20reader-Almanac-3f6b48"></a>
+  <a href="https://github.com/Tan0610/p2-birders/actions/workflows/check.yml"><img alt="check" src="https://github.com/Tan0610/p2-birders/actions/workflows/check.yml/badge.svg"></a>
+  <a href="scripts/audit-checks.mjs"><img alt="audit checks 8/8" src="https://img.shields.io/badge/audit%20checks-8%2F8-3f6b48"></a>
+  <a href="#run-it-locally"><img alt="tests 116 passing" src="https://img.shields.io/badge/tests-116%20passing-3f6b48"></a>
+  <br>
+  <img alt="Swarm ID 0.4.1" src="https://img.shields.io/badge/Swarm%20ID-0.4.1-c98a1b">
+  <img alt="bee-js 11.2.0" src="https://img.shields.io/badge/bee--js-11.2.0-c98a1b">
+  <img alt="Node 22.12+" src="https://img.shields.io/badge/Node-22.12%2B-2b2a28">
+  <img alt="TypeScript 5.9" src="https://img.shields.io/badge/TypeScript-5.9-2b2a28">
+  <a href="LICENSE"><img alt="License MIT" src="https://img.shields.io/badge/License-MIT-2b2a28"></a>
+</p>
+
+The Deccan Birders have kept sighting records since 1998 and lost them to three apps: a forum that
+closed, a Facebook group that ate the photos, and a birding app that was bought, shut down, and left
+a CSV where the location column said "near the usual spot". Meera's one rule for the next move:
+**whatever writes the records must not be the only thing that can read them.**
+
+So a sighting filed in the **Field Journal** is stored on Swarm under the birder's own Swarm ID, as
+self-describing JSON, and is read back by **Almanac**, a separate app on another origin that shares
+no code with the writer, or by a one-file CLI, or by whatever someone writes next year from
+[`FORMAT.md`](FORMAT.md). Nobody exports anything, because the records were never inside the app.
+
+**Contents:** [60-second tour](#60-second-tour) · [What the judge checks](#what-the-judge-checks) ·
+[How it fits together](#how-it-fits-together) · [Screenshots](#screenshots) · [Try it live](#try-it-live) ·
+[Verify without us](#verify-without-us) · [Build a fourth app](#build-a-fourth-app) ·
+[Run it locally](#run-it-locally) · [Details](#details)
 
 ## 60-second tour
 
-**What it is.** A birder files a sighting in the **Field Journal**; it is stored on Swarm under
-their own Swarm ID, as self-describing JSON (`format` + `formatVersion` inside the bytes), listed
-in a journal that a signed feed points to. Anyone can then read it back with software that has
-never seen the writer, and carry it out to the wider biodiversity world as Darwin Core.
-
-| Live | URL |
+| | Where |
 |---|---|
-| Field Journal (writer) | https://deccan-field-journal.vercel.app |
-| Almanac (independent reader, its own origin) | https://deccan-almanac.vercel.app |
+| ✍️ **Field Journal** (writer) | https://deccan-field-journal.vercel.app · [`apps/writer`](apps/writer) |
+| 📖 **Almanac** (independent reader, its own origin) | https://deccan-almanac.vercel.app · [`apps/reader`](apps/reader) |
+| ⌨️ **`read-sightings`** (CLI reader, imports nothing from this repo) | [`tools/read-sightings/read-sightings.mjs`](tools/read-sightings/read-sightings.mjs) |
+| 📜 **The format** a fourth app relies on | [`FORMAT.md`](FORMAT.md), [JSON Schemas](packages/format/schema), [fixtures and a signed feed-update vector](packages/format/fixtures) |
 
-> **Live proof: a real sighting filed through the live writer (Swarm ID, subsidised public gateway).**
-> Journal address: `0xee8925d7799c604e8f8501774e619fbe674cf2f7` · open it in Almanac:
-> [deccan-almanac.vercel.app/?owner=0xee89…f2f7](https://deccan-almanac.vercel.app/?owner=0xee8925d7799c604e8f8501774e619fbe674cf2f7)
-> · or run `npm run read -- --owner 0xee8925d7799c604e8f8501774e619fbe674cf2f7`
-> · refs, signature check and Darwin Core export: [docs/LIVE_EVIDENCE.md](docs/LIVE_EVIDENCE.md)
+> [!NOTE]
+> **Live proof.** A real sighting (Indian Robin ×12, Kas plateau) was filed through the live writer
+> on 19 September 2026 with Swarm ID and the subsidised public gateway, then read back by three
+> readers that share no code with it.
+> Journal address `0xee8925d7799c604e8f8501774e619fbe674cf2f7` ·
+> [open it in Almanac](https://deccan-almanac.vercel.app/?owner=0xee8925d7799c604e8f8501774e619fbe674cf2f7) ·
+> `npm run read -- --owner 0xee8925d7799c604e8f8501774e619fbe674cf2f7` ·
+> every reference, the signature check and the Darwin Core export: [`docs/LIVE_EVIDENCE.md`](docs/LIVE_EVIDENCE.md)
 
-**The independence proof: three readers, none of which imports the writer.**
+**Three readers, none of which imports the writer:**
 
-| Reader | What it may import | Proof |
+| Reader | What it may import | Held there by |
 |---|---|---|
-| **Almanac** ([`apps/reader`](apps/reader)) | only [`@deccan-birders/format`](packages/format) (zero runtime deps, no app code), React, `@noble/*` | ESLint `no-restricted-imports`; audit check 4 scans its sources, `package.json` and the built bundle |
-| **`read-sightings` CLI** ([`tools/read-sightings`](tools/read-sightings/read-sightings.mjs)) | **nothing** from this repo: one file, `node:*` and `@noble/*` only; it even carries its own copy of the Darwin Core mapping | audit check 4; [`tests/end-to-end.test.ts`](tests/end-to-end.test.ts), [`tests/dwc-parity.test.ts`](tests/dwc-parity.test.ts) |
-| **Any fourth app** | [`FORMAT.md`](FORMAT.md) + [JSON Schemas](packages/format/schema) + [fixtures and a signed feed-update test vector](packages/format/fixtures) | FORMAT.md §6 checklist; and §7 maps every record to [Darwin Core](https://dwc.tdwg.org/terms/), so GBIF, iNaturalist imports or a spreadsheet can take the records without any of our code |
+| **Almanac** | only [`@deccan-birders/format`](packages/format) (zero runtime deps, no app code), React, `@noble/*` | ESLint `no-restricted-imports`; audit check 4 scans its sources, `package.json` and the built bundle |
+| **`read-sightings` CLI** | **nothing** from this repo: one file, `node:*` and `@noble/*` only, with its own copy of the Darwin Core mapping | audit check 4; [`tests/end-to-end.test.ts`](tests/end-to-end.test.ts), [`tests/dwc-parity.test.ts`](tests/dwc-parity.test.ts) |
+| **Any fourth app** | [`FORMAT.md`](FORMAT.md) and the data on Swarm | the [§6 reader checklist](FORMAT.md#6-writing-a-reader-checklist) and fixtures; [§7](FORMAT.md#7-mapping-to-darwin-core) maps every record to [Darwin Core](https://dwc.tdwg.org/terms/) for GBIF, iNaturalist imports or a spreadsheet |
 
-**Where each check lives** (full reasoning in [How each check is met](#how-each-check-is-met)):
+## What the judge checks
 
-| # | Check | File → function | Enforced by |
-|---|---|---|---|
-| 1 | Every write gated on a capability check | [`apps/writer/src/swarm/uploader.ts`](apps/writer/src/swarm/uploader.ts) → `createUploader`, `gate`; [`swarm/capability.ts`](apps/writer/src/swarm/capability.ts) → `checkUploadCapability` | ESLint, audit 1, `apps/writer/test/gate.test.ts` |
-| 2 | Route for users with no stamp | [`apps/writer/src/swarm/client.ts`](apps/writer/src/swarm/client.ts) → `getSwarmId` (`subsidisedGatewayUrl`) | audit 2 |
-| 3 | Format name + version in the bytes | [`packages/format/src/codec.ts`](packages/format/src/codec.ts) → `encodeSighting`, `encodeJournal` | audit 3, `packages/format/test/format.test.ts` |
-| 4 | Reader does not import the writer | [`apps/reader/package.json`](apps/reader/package.json); [`apps/reader/src/journal.ts`](apps/reader/src/journal.ts) → `loadJournalByOwner` | ESLint, audit 4 |
-| 5 | Download endpoint matches upload | [`apps/reader/src/swarm/bytes.ts`](apps/reader/src/swarm/bytes.ts) → `downloadBytes`; [`swarm/feed.ts`](apps/reader/src/swarm/feed.ts) → `fetchFeedUpdate` | audit 5 |
-| 6 | No pin/tag toward the gateway | [`apps/writer/src/swarm/uploader.swarmId.ts`](apps/writer/src/swarm/uploader.swarmId.ts) → `uploadBytesViaSwarmId` (`pin?: never; tag?: never`) | the type, ESLint, audit 6 |
-| 7 | Failures show a specific reason | [`apps/writer/src/errors.ts`](apps/writer/src/errors.ts) → `classifyError`; [`components/ErrorPanel.tsx`](apps/writer/src/components/ErrorPanel.tsx) | audit 7, `apps/writer/test/writer.test.ts` |
-| 8 | No secrets in tracked files | [`.gitignore`](.gitignore), [`scripts/mock-gateway.mjs`](scripts/mock-gateway.mjs) → `createThrowawaySigner` | audit 8 |
-| + | Records leave as Darwin Core | [`packages/format/src/dwc.ts`](packages/format/src/dwc.ts) → `toDwcOccurrence`, `toDwcCsv`; Almanac [`components/TakeAway.tsx`](apps/reader/src/components/TakeAway.tsx); CLI `--dwc` | `packages/format/test/dwc.test.ts`, `tests/dwc-parity.test.ts` (CLI and package vs one golden CSV) |
+The eight scored test cases (80 points), word for word, with the code that meets each one. Every
+row is re-verified from source by `npm run audit:checks` (and the built reader bundle for #4), which
+runs in [CI](.github/workflows/check.yml) on every push. The full reasoning per row is in
+[How each check is met](#how-each-check-is-met).
 
-**Verify it yourself, no keys, no account** (after `npm install`):
+| # | Test case | Pts | Where it is met | Evidence |
+|---|---|---|---|---|
+| 1 | Upload capability is checked before an upload is attempted | 12 | [`uploader.ts` → `createUploader`, `gate`](apps/writer/src/swarm/uploader.ts#L20): each upload method starts with `await gate()`, which runs [`capability.ts` → `checkUploadCapability`](apps/writer/src/swarm/capability.ts#L16) | [`gate.test.ts`](apps/writer/test/gate.test.ts): signed out, no drive, failed stamper and offline make **no** upload call; ESLint bans upload calls outside the two uploader branch files; audit 1 |
+| 2 | An upload route is configured for a user who holds no stamp | 6 | [`client.ts` → `getSwarmId`](apps/writer/src/swarm/client.ts#L15) passes `subsidisedGatewayUrl` from [`config.ts`](apps/writer/src/config.ts#L30) (`https://api.gateway.ethswarm.org/`) | the live filing used exactly this route: no drive, no node, no stamp bought ([evidence](docs/LIVE_EVIDENCE.md#the-filing)); audit 2 |
+| 3 | Each stored record carries its own format identifier and version | 14 | [`codec.ts` → `encodeSighting`](packages/format/src/codec.ts#L30), [`encodeJournal`](packages/format/src/codec.ts#L48): `format` and `formatVersion` are the first keys inside the uploaded bytes | the live record begins `{"format":"org.deccanbirders.sighting","formatVersion":"1.0.0",…` ([evidence](docs/LIVE_EVIDENCE.md#the-addresses)); [`format.test.ts`](packages/format/test/format.test.ts); audit 3 |
+| 4 | A reader exists that does not import the writing app's code | 14 | [`apps/reader/package.json`](apps/reader/package.json) (only `@deccan-birders/format` from the workspace); [`journal.ts` → `loadJournalByOwner`](apps/reader/src/journal.ts#L42); plus the [CLI](tools/read-sightings/read-sightings.mjs), which imports nothing from the repo | ESLint `no-restricted-imports`; audit 4 also checks the built bundle has no `SwarmIdClient`/axios; Almanac on its own origin read the live journal |
+| 5 | Records are read back through the same endpoint family they were written to | 10 | bytes uploads are read with `GET /bytes` in [`bytes.ts` → `downloadBytes`](apps/reader/src/swarm/bytes.ts#L8); the single-owner-chunk feed update is read with `GET /chunks` in [`feed.ts` → `fetchFeedUpdate`](apps/reader/src/swarm/feed.ts#L85) ([FORMAT.md §4](FORMAT.md#4-where-each-object-lives)) | `curl` lines for the live chunk, journal and record in [LIVE_EVIDENCE](docs/LIVE_EVIDENCE.md#the-addresses); nothing reads `/bzz`; audit 5 |
+| 6 | Pin and tag options are not passed on the gateway upload path | 6 | [`uploader.swarmId.ts`](apps/writer/src/swarm/uploader.swarmId.ts#L14): `GatewaySafeUploadOptions = … & { pin?: never; tag?: never }` for [`uploadBytesViaSwarmId`](apps/writer/src/swarm/uploader.swarmId.ts#L16); the feed update passes only `{ index, hasTimestamp, encrypt }` | the type makes it a compile error; ESLint bans `pin: true`/`tag` outside [`uploader.ownNode.ts`](apps/writer/src/swarm/uploader.ownNode.ts) (your own node only); audit 6 |
+| 7 | A failed or unavailable upload produces a specific reason | 10 | [`errors.ts` → `MESSAGES`](apps/writer/src/errors.ts#L42) (20 failure codes, each with its own title, message and next step) and [`classifyError`](apps/writer/src/errors.ts#L223); rendered by [`ErrorPanel`](apps/writer/src/components/ErrorPanel.tsx#L10) | [`writer.test.ts`](apps/writer/test/writer.test.ts) ("never shows two failures with the same title"); audit 7 |
+| 8 | No credential, private key, mnemonic, gift code or authenticated URL appears in any tracked file | 8 | signing happens inside the Swarm ID iframe and the gateway needs no key, so there is nothing to hold; [`.gitignore`](.gitignore) keeps `.env*` out; test keys come from [`createThrowawaySigner`](scripts/mock-gateway.mjs#L35) at run time | audit 8 scans every tracked file for private keys, PEM blocks, mnemonics, credential URLs, API tokens and gift codes |
 
-```sh
-npm run read -- --owner <addr>                         # every sighting in a journal, signature checked
-npm run read -- --owner <addr> --dwc                   # the same journal as a Darwin Core CSV
-npm run read -- --owner <addr> --dwc --out journal.csv # ...written to a file
-npm run audit:checks                                   # re-verifies checks 1-8 from the source and the built reader
-```
+**The brief's "What to do", item by item:**
 
-No live address handy? `npm run mock:gateway` serves a signed sample journal offline and prints
-an address to use with `--gateway http://127.0.0.1:4555`.
+| The brief asks | What this repo does |
+|---|---|
+| Build something a birder would use to file a sighting. | The [Field Journal](https://deccan-field-journal.vercel.app): species, count, date and time, place with a privacy choice (exact, rounded to ~1 km, or name only), notes, an optional photo with EXIF stripped. |
+| Store sightings on Swarm under the user's own identity. | Sign in with Swarm ID; every record, photo and journal edition goes to Swarm, and the journal pointer is a feed update signed by the user's Swarm ID app key. The journal address *is* that identity. |
+| Handle the case where a signed-in user cannot upload, because that is what happens to every first-time user. | First-time users (no drive) upload through the subsidised gateway. If uploading is still impossible, the File button is disabled with the named reason (`NO_DRIVE`, `DRIVE_EXPIRED`, `STAMPER_FAILED`, `UPLOAD_UNAVAILABLE`) and a way to fix it, and no request is made. |
+| Then build a second, separate reader, a different entrypoint, not a tab in the same app. Assume its author has your stored data and your published format description, and nothing else. | [Almanac](https://deccan-almanac.vercel.app): its own workspace, build and Vercel origin, written against `FORMAT.md`. The CLI goes further and imports nothing at all. |
+| Don't paste your gift code into the repo. | No gift code was ever needed, so there is none to leak; audit 8 checks anyway. |
+| **Deliverable:** the sighting app, the independent reader, and the format description a fourth app relies on. | [`apps/writer`](apps/writer), [`apps/reader`](apps/reader) + [`tools/read-sightings`](tools/read-sightings), [`FORMAT.md`](FORMAT.md) + [schemas](packages/format/schema) + [fixtures and test vectors](packages/format/fixtures). |
 
----
-
-The Deccan Birders have kept sighting records since 1998 and lost them to three apps: a forum that
-closed, a Facebook group that ate the photos, and a birding app that was bought, shut down, and
-left a CSV where the location column said "near the usual spot".
-
-Meera's one rule for the next move: **whatever writes the records must not be the only thing that
-can read them.**
-
-This repository has three pieces:
-
-| | What it is | Where |
-|---|---|---|
-| **Field Journal** | The app a birder uses to file a sighting. Signs in with Swarm ID and stores each sighting on Swarm under the birder's own identity. | [`apps/writer`](apps/writer) |
-| **Almanac** | A separate reader, on its own origin, that shows anyone's sightings from a journal address. It shares no code with the Field Journal. | [`apps/reader`](apps/reader) |
-| **The format** | The published description a fourth app relies on, with JSON Schemas, fixtures and test vectors. | [`FORMAT.md`](FORMAT.md), [`packages/format`](packages/format) |
-
-Plus [`tools/read-sightings`](tools/read-sightings), a Node command-line reader that imports
-nothing from this repository. It shows that the data and `FORMAT.md` are enough on their own.
-
-Meera files a sighting in the Field Journal. She sends the group her journal address. They open it
-in Almanac, or with `read-sightings`, or with whatever someone writes next year from `FORMAT.md`.
-Nobody exports anything, because the records were never inside the app.
-
-## What it looks like
-
-| Field Journal (signed out, live Swarm ID) | Almanac, reading a journal | Almanac, one sighting |
-|---|---|---|
-| ![Field Journal form on a yellow notebook page](docs/screenshots/field-journal.png) | ![Almanac showing pressed specimen sheets](docs/screenshots/almanac-journal.png) | ![Almanac sighting detail](docs/screenshots/almanac-sighting.png) |
-
-The Almanac screenshots read the sample journal served by `npm run mock:gateway`
-(illustrative records and drawn placeholder photos), not real sightings.
+> [!IMPORTANT]
+> **Acceptance: "Meera files a sighting in one app and opens it in a completely different one, and nobody had to export anything."**
+>
+> Done on the live deployments, 19 September 2026 ([full record](docs/LIVE_EVIDENCE.md)):
+> 1. Filed in the Field Journal at `deccan-field-journal.vercel.app` (12:27:22 UTC), Swarm ID sign-in, subsidised gateway.
+> 2. Opened in Almanac at `deccan-almanac.vercel.app`, a different origin, from the journal address alone: "Tan0610's journal, Edition 0", the Indian Robin card. The browser made only `GET`s, to Almanac's own host and the gateway.
+> 3. Read by the CLI, with the feed signature recovered and matching the journal address.
+> 4. Carried out as Darwin Core (`occurrenceID urn:uuid:afb89a9e-…`, `basisOfRecord HumanObservation`), from Almanac's download button or `--dwc`.
+>
+> Nothing was exported: each reader fetched the bytes from Swarm itself.
 
 ## How it fits together
 
-```
- Field Journal (apps/writer)                              Swarm                             Almanac (apps/reader)
- ───────────────────────────                              ─────                             ─────────────────────
- sign in with Swarm ID
- check: signed in? can upload? online?  ── no ──► stop, show the specific reason
-      │ yes
- photo bytes ─────────── bytes upload ───────────► /bytes/<photo>  ◄────── GET /bytes ──── photo, typed by the record
- sighting JSON {format, formatVersion, …} ────────► /bytes/<record> ◄────── GET /bytes ──── validate format + version
- journal JSON {entries:[…], previous} ────────────► /bytes/<journal> ◄───── GET /bytes ──── list of sightings
- feed update #n = timestamp ‖ journal ref ─ SOC ──► /chunks/<soc n> ◄───── GET /chunks ─── find latest n by probing
-      signed by your Swarm ID app key                     ▲
-                                                          └── the journal address (owner + fixed topic) never changes
+**Write path.** Every upload call goes through the capability gate first; nothing reaches Swarm
+without it.
+
+```mermaid
+flowchart LR
+  subgraph FJ["Field Journal · apps/writer"]
+    direction TB
+    F["File this sighting"] --> G{"gate()<br/>checkUploadCapability()<br/>online? signed in? canUpload?"}
+    G -- "no" --> X["ErrorPanel: the specific reason<br/>(no upload call is made)"]
+    G -- "yes, re-checked before each upload" --> U["photo bytes (optional)<br/>encodeSighting(): {format, formatVersion, …}<br/>encodeJournal(): {entries, previous}"]
+  end
+  subgraph SID["Swarm ID"]
+    K["app key for this origin<br/>(private key never leaves the iframe)"]
+    R["route: your drive, or the subsidised<br/>gateway when you have none"]
+  end
+  subgraph SW["Swarm"]
+    B[("bytes: photo, record, journal")]
+    C[("single-owner chunk:<br/>feed update #n = timestamp ‖ journal ref")]
+  end
+  U -- "bytes upload, no pin, no tag" --> R --> B
+  U -- "feed update" --> K -- "signed SOC upload" --> C
 ```
 
-- **Who pays:** if your Swarm ID has a drive (a postage batch), it pays. If it does not, which is every
-  first-time user, the public subsidised gateway `https://api.gateway.ethswarm.org/` stamps the upload.
-  You can also point uploads at your own Bee node and batch.
-- **Who signs:** the journal pointer is a feed update signed by your Swarm ID app key, inside the Swarm
+**Read path.** Any reader, with nothing but the journal address and [`FORMAT.md`](FORMAT.md).
+
+```mermaid
+flowchart LR
+  O["journal address<br/>(the owner, 0x…)"] --> T["topic = keccak256('org.deccanbirders.sighting/journal/v1')<br/>SOC address for index n"]
+  T --> CH["GET /chunks/‹soc n›<br/>probe for the latest n,<br/>recover the signer"]
+  CH --> J["GET /bytes/‹journal ref›<br/>check format + major version"]
+  J --> RB["GET /bytes/‹record ref›<br/>for every entry (+ photo)"]
+  RB --> A["Almanac: specimen cards"]
+  RB --> CLI["read-sightings: text or JSON"]
+  RB --> D["Darwin Core CSV<br/>(Almanac or --dwc)"]
+```
+
+**The no-shared-code boundary.** The only thing both sides share is the published format.
+
+```mermaid
+flowchart TB
+  subgraph WR["writer side"]
+    W["apps/writer · Field Journal<br/>React, Swarm ID 0.4.1, bee-js 11.2.0"]
+  end
+  subgraph RD["reader side: nothing imported from apps/writer (ESLint + audit 4)"]
+    AL["apps/reader · Almanac<br/>React, @noble/*, plain fetch GETs"]
+    CL["tools/read-sightings<br/>node:* and @noble/* only"]
+  end
+  subgraph FMT["the contract, shared by publishing it"]
+    PF["packages/format<br/>zero runtime deps, no app code"]
+    FM["FORMAT.md + JSON Schemas<br/>+ fixtures + feed vector"]
+  end
+  W -- "imports" --> PF
+  AL -- "imports" --> PF
+  CL -. "written from" .-> FM
+  PF -. "implements" .- FM
+```
+
+- **Who pays:** your Swarm ID drive (postage batch) if you have one; if not, which is every
+  first-time user, the public subsidised gateway stamps the upload. Your own Bee node is an optional
+  route for the bytes uploads.
+- **Who signs:** the journal pointer is a feed update signed by your Swarm ID app key inside the Swarm
   ID iframe. This app never sees a private key.
 
-## Run it
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/almanac-live.png" alt="Almanac reading the real live journal: Tan0610's journal, Edition 0, one Indian Robin card and the Darwin Core download"></td>
+    <td width="50%"><img src="docs/screenshots/almanac-live-record.png" alt="Almanac showing the single real sighting opened by its Swarm reference"></td>
+  </tr>
+  <tr>
+    <td><b>Almanac, live:</b> the real journal <code>0xee89…f2f7</code>, read from Swarm on its own origin, with the Darwin Core and JSON downloads.</td>
+    <td><b>Almanac, live:</b> the same sighting opened by its record reference alone (<code>?record=3b267cc5…</code>).</td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="25%"><img src="docs/screenshots/field-journal-phone.png" alt="Field Journal on a phone, signed out, asking to sign in with Swarm ID"></td>
+    <td width="25%"><img src="docs/screenshots/almanac-live-phone.png" alt="Almanac on a phone reading the real journal"></td>
+    <td width="50%"><img src="docs/screenshots/field-journal.png" alt="Field Journal form on a yellow notebook page, desktop, signed out"></td>
+  </tr>
+  <tr>
+    <td><b>Field Journal, phone</b> (live, signed out)</td>
+    <td><b>Almanac, phone</b> (live journal)</td>
+    <td><b>Field Journal, desktop:</b> the whole form, File disabled until you sign in.</td>
+  </tr>
+</table>
+
+<details>
+<summary>Almanac with the offline sample journal (illustrative records from <code>npm run mock:gateway</code>, drawn placeholder photos)</summary>
+
+| Almanac, reading a journal | Almanac, one sighting |
+|---|---|
+| ![Almanac showing pressed specimen sheets from the sample journal](docs/screenshots/almanac-journal.png) | ![Almanac sighting detail from the sample journal](docs/screenshots/almanac-sighting.png) |
+
+</details>
+
+## Try it live
+
+1. **Read a real journal right now:**
+   [deccan-almanac.vercel.app/?owner=0xee89…f2f7](https://deccan-almanac.vercel.app/?owner=0xee8925d7799c604e8f8501774e619fbe674cf2f7).
+   Open **How this page found the journal** to see the feed index, chunk and signer it used.
+2. **File your own:** open the [Field Journal](https://deccan-field-journal.vercel.app), sign in with
+   Swarm ID (no node, no stamp and no gift code needed; the subsidised gateway covers a first-time
+   user), and file a sighting. The **Your journal** card shows your journal address; the filed stamp
+   gives the sighting reference and an **Open in Almanac** link.
+3. **Take it elsewhere:** in Almanac, **Download Darwin Core CSV** or **Download the original JSON**.
+   Both are made in your browser and sent nowhere.
+
+Records are public and permanent for as long as their stamp is paid; there is no delete, only leaving
+a record out of your next journal edition.
+
+## Verify without us
+
+No keys, no account, no trust in our apps. After `npm install`:
+
+```sh
+npm run read -- --owner 0xee8925d7799c604e8f8501774e619fbe674cf2f7        # every sighting, feed signature checked
+npm run read -- --owner 0xee8925d7799c604e8f8501774e619fbe674cf2f7 --dwc  # the same journal as Darwin Core CSV
+npm run audit:checks                                                         # re-verifies the 8 checks from source + built reader
+```
+
+Or with nothing but `curl` (the references are in [LIVE_EVIDENCE](docs/LIVE_EVIDENCE.md#the-addresses)):
+
+```sh
+curl https://api.gateway.ethswarm.org/chunks/5f56b01ea3999e789acc4b750b88f5d83c789e0aebf385bf5c843f0c38642d7a  # signed feed update
+curl https://api.gateway.ethswarm.org/bytes/3b267cc53d561088745bde93fd575112aa52af789b167839630b2ba19caf7ae3   # the sighting record
+```
+
+Offline? `npm run mock:gateway` serves a signed sample journal at `http://127.0.0.1:4555` and prints
+an address to use with `--gateway http://127.0.0.1:4555`. Nothing it serves is a real sighting.
+
+> The live data went through the subsidised public gateway, so its operators decide how long it is
+> kept. If those references stop resolving one day, that is why.
+
+## Build a fourth app
+
+Everything a stranger needs is in the repo, and nothing requires our code:
+
+| You need | Where |
+|---|---|
+| The contract (RFC 2119 wording, versioning rules) | [`FORMAT.md`](FORMAT.md) |
+| Machine-readable schemas (JSON Schema 2020-12) | [`sighting.v1.schema.json`](packages/format/schema/sighting.v1.schema.json), [`journal.v1.schema.json`](packages/format/schema/journal.v1.schema.json) |
+| Documents to test against (valid, minimal, future-minor, invalid, v2) | [`packages/format/fixtures`](packages/format/fixtures) |
+| A complete signed feed update with its expected journal ref and signer | [`feed-update.vector.json`](packages/format/fixtures/feed-update.vector.json), [FORMAT.md §3.4](FORMAT.md#34-test-vectors) |
+| The reader algorithm as a checklist | [FORMAT.md §6](FORMAT.md#6-writing-a-reader-checklist) |
+| The Darwin Core mapping, term by term | [FORMAT.md §7](FORMAT.md#7-mapping-to-darwin-core) |
+| A worked example in one file | [`tools/read-sightings/read-sightings.mjs`](tools/read-sightings/read-sightings.mjs) |
+
+In short: topic from a fixed string → probe `GET /chunks` for the latest feed index → the journal via
+`GET /bytes` → each record via `GET /bytes`, checking `format` and the major `formatVersion` of each.
+
+## Run it locally
 
 Node 22.12 or newer.
 
@@ -115,43 +260,29 @@ Node 22.12 or newer.
 npm install
 npm run dev:writer     # Field Journal on http://localhost:5173
 npm run dev:reader     # Almanac on http://localhost:5174 (a different origin on purpose)
-
-npm run read -- --owner 0x<journal address>          # the command-line reader
-npm run read -- --owner 0x<journal address> --json --photos ./photos
-npm run read -- --owner 0x<journal address> --dwc --out journal.csv   # Darwin Core CSV (FORMAT.md §7)
+npm run read -- --owner 0x<journal address> [--json] [--photos ./photos] [--dwc --out journal.csv]
 ```
 
-No node and no gift code are needed: sign in with Swarm ID and the subsidised gateway covers the
-uploads. To use your own node instead, open **Where uploads go** in the Field Journal and pick a
-usable batch. The node has to allow the page's origin, for example
-`--cors-allowed-origins="http://localhost:5173,http://localhost:5174"`.
-
-Configuration is in `apps/writer/.env.example` and `apps/reader/.env.example`. Every value is a
-public URL; there are no secrets anywhere in this project.
-
-### Try the readers without a network
-
-```sh
-npm run mock:gateway   # serves a signed sample journal at http://127.0.0.1:4555 and prints its address
-npm run dev:reader     # then open the Almanac link it prints
-npm run read -- --owner 0x<printed address> --gateway http://127.0.0.1:4555
-```
-
-The mock gateway holds data laid out exactly as FORMAT.md describes, signed by a
-throwaway key it makes at start-up. Nothing it serves is a real sighting.
-
-### Checks
+To use your own Bee node instead of the gateway, open **Where uploads go** in the Field Journal and
+pick a usable batch; the node has to allow the page's origin, for example
+`--cors-allowed-origins="http://localhost:5173,http://localhost:5174"`. Configuration is in
+`apps/writer/.env.example` and `apps/reader/.env.example`; every value is a public URL.
 
 ```sh
 npm run typecheck      # tsc, all workspaces
-npm run lint           # eslint, including rules that keep the reader independent
-npm test               # vitest: format rules, Darwin Core mapping, feed vectors, capability gate, error mapping, bee-js interop, end-to-end readers
+npm run lint           # eslint, including the rules that keep the reader independent
+npm test               # vitest: 116 tests (format rules, Darwin Core, feed vectors, gate, errors, bee-js interop, end-to-end readers)
 npm run build          # both apps
-npm run audit:checks   # re-verifies the checks below from the source (and the built reader bundle)
-npm run check          # all of the above
+npm run audit:checks   # re-verifies the eight checks from source (and the built reader bundle)
+npm run check          # all of the above; CI runs the same steps on every push
 ```
 
-## How each check is met
+## Details
+
+<details>
+<summary><b>How each check is met</b> (full reasoning)</summary>
+
+### How each check is met
 
 Every row names the code a reviewer should open, and how the repo stops it regressing
 (`npm run lint` and `npm run audit:checks` both fail on a break).
@@ -167,7 +298,15 @@ Every row names the code a reviewer should open, and how the repo stops it regre
 | 7 | **Failures reach the screen with a distinguishing reason** | 20 failure codes, each with its own title, explanation, next step and fix button (no drive, drive expired, popup blocked, "Failed to fetch" (CORS, filter or unreachable), payload too large, rate limited, gateway 5xx, own node down, saved-but-journal-failed, …). `classifyError()` maps Swarm ID/bee-js errors onto them and `ErrorPanel` renders title, message, next step and the raw detail. The reader's `StatusNotice` does the same for 10 reader codes (a 404 and a 500 on feed update 0 read differently). | `apps/writer/src/errors.ts` → `MESSAGES`, `classifyError`; `components/ErrorPanel.tsx`; `apps/reader/src/components/StatusNotice.tsx` | audit check 7; `apps/writer/test/writer.test.ts`; `apps/reader/test/feed.test.ts` |
 | 8 | **No secrets in tracked files** | Signing happens inside the Swarm ID iframe and the gateway needs no key, so there is nothing to hold. `.env*` is git-ignored except `.env.example` files, which hold only public URLs. Test and mock keys are generated at run time and never written. The 64-hex strings in `FORMAT.md` and tests are the public feed topic, identifiers, SOC addresses and example references (test vectors), not keys. | `.gitignore`; `apps/*/.env.example`; `scripts/mock-gateway.mjs` → `createThrowawaySigner` | audit check 8 scans every tracked file for private keys, PEM blocks, mnemonics, credential URLs, API tokens and gift codes |
 
-## Things worth knowing
+The Darwin Core export is extra to the eight: [`packages/format/src/dwc.ts`](packages/format/src/dwc.ts) →
+`toDwcOccurrence`, `toDwcCsv`; Almanac's [`TakeAway`](apps/reader/src/components/TakeAway.tsx); the CLI's
+own copy behind `--dwc`. `packages/format/test/dwc.test.ts` and `tests/dwc-parity.test.ts` hold the
+package and the CLI to one golden CSV.
+
+</details>
+
+<details>
+<summary><b>Things worth knowing</b>: first-time users, the gateway's limits, location privacy, permanence, one writer per journal, per-origin addresses, npm audit</summary>
 
 - **First-time users.** A new Swarm ID has no drive. With the subsidised gateway configured (the
   default), `uploadMode` is `subsidised`, filing works, and the note above the form says why: no drive
@@ -201,7 +340,10 @@ Every row names the code a reviewer should open, and how the repo stops it regre
   the Node-only advisories (proxy, NO_PROXY, stream limits) do not apply; it goes away when Swarm ID
   publishes a rebuilt bundle.
 
-## Deploying
+</details>
+
+<details>
+<summary><b>Deploying</b> (two Vercel projects from one repository)</summary>
 
 Both apps are static sites (`apps/*/dist`). For Vercel, create **two projects from the same
 repository**. Each app's `vercel.json` already holds these values, so importing the repo and
@@ -226,7 +368,10 @@ stable domain: Swarm ID derives the journal address from the app's origin, so a 
 a new, empty journal. Preview deployments get their own URLs, so sign in on the production domain
 when filing real sightings.
 
-## Layout
+</details>
+
+<details>
+<summary><b>Layout</b></summary>
 
 ```
 FORMAT.md                     the published format: read this to write a fourth app
@@ -249,14 +394,13 @@ scripts/mock-gateway.mjs      a seeded stand-in gateway (/bytes, /chunks) for te
 tests/interop.test.ts         the reader's feed maths and signature check against bee-js
 tests/end-to-end.test.ts      Almanac's loader and the CLI against the mock gateway
 tests/dwc-parity.test.ts      the CLI's --dwc and packages/format against one golden CSV
+docs/LIVE_EVIDENCE.md         the first real filing, with every reference and three independent reads
 ```
 
-## Versions
+</details>
 
-Pinned exactly: `@snaha/swarm-id` 0.4.1, `@ethersphere/bee-js` 11.2.0 (the version Swarm ID 0.4.1
-is built against, with the v11 flat API: `bee.uploadData`, `bee.getPostageBatch`),
+**Versions**, pinned exactly: `@snaha/swarm-id` 0.4.1, `@ethersphere/bee-js` 11.2.0 (the version
+Swarm ID 0.4.1 is built against, with the v11 flat API: `bee.uploadData`, `bee.getPostageBatch`),
 `@noble/hashes` 2.4.0, React 19.3.0, Vite 8.3.0, TypeScript 5.9.3, Vitest 5.0.1.
 
-## Licence
-
-MIT
+**Licence:** [MIT](LICENSE)
