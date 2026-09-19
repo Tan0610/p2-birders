@@ -297,27 +297,65 @@ code,
 /* ---------- loading ---------- */
 
 .loading {
+  padding: 1rem 0 0;
+}
+.loading-line {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 3rem 0;
+  gap: 0.9rem;
+  margin: 0 0 1.75rem;
   font: italic 400 1.35rem var(--font-serif);
 }
 .loading-feather {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 50% 0;
-  background: var(--sage);
-  animation: drift 1.6s ease-in-out infinite;
+  flex: 0 0 auto;
+  width: 1.6rem;
+  height: 2.6rem;
+  color: var(--sage);
+  transform-origin: 50% 90%;
+  animation: drift 2.4s ease-in-out infinite;
 }
 @keyframes drift {
   0%,
   100% {
-    transform: rotate(-20deg) translateY(0);
+    transform: rotate(-18deg) translate(-2px, 0);
   }
   50% {
-    transform: rotate(25deg) translateY(-6px);
+    transform: rotate(16deg) translate(3px, -5px);
   }
+}
+
+/* the drawer's outline, pencilled in before the sheets arrive */
+.ghost-title {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  margin: 0 0 2.25rem;
+}
+.ghost-egg {
+  width: 3.4rem;
+  height: 4.1rem;
+  border: 1.5px dashed rgb(236 229 211 / 0.35);
+  border-radius: 50% 50% 47% 47% / 60% 60% 40% 40%;
+  transform: rotate(-8deg);
+}
+.ghost-bars {
+  display: grid;
+  gap: 0.7rem;
+  width: min(26rem, 60vw);
+}
+.ghost-bars span,
+.ghost-bar {
+  display: block;
+  height: 0.9rem;
+  border-radius: 3px;
+  background: rgb(236 229 211 / 0.12);
+  animation: breathe 1.8s ease-in-out infinite;
+}
+.ghost-bars span:first-child {
+  height: 2.2rem;
+}
+.ghost-bars span:last-child {
+  width: 70%;
 }
 
 /* ---------- notice ---------- */
@@ -365,10 +403,57 @@ code,
   align-items: flex-start;
   margin-bottom: 1.5rem;
 }
-.title-page svg {
+/* the journal's own egg, sitting in a pencilled nest */
+.title-egg {
+  position: relative;
   flex: 0 0 auto;
+  display: grid;
+  justify-items: center;
+  width: 5.5rem;
+  padding-top: 0.2rem;
+}
+.title-egg svg[role='img'] {
+  position: relative;
+  z-index: 1;
   transform: rotate(-8deg);
   filter: drop-shadow(0 6px 6px rgb(0 0 0 / 0.45));
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.title-egg:hover svg[role='img'] {
+  transform: rotate(6deg);
+}
+.title-nest {
+  width: 5.5rem;
+  margin-top: -1.6rem;
+  color: var(--on-board-soft);
+}
+
+/* the edition's catalogue line: what this drawer holds, at a glance */
+.ledger {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0.8rem 0 0.7rem;
+  padding: 0;
+}
+.ledger div {
+  display: flex;
+  flex-direction: column-reverse;
+  padding: 0 1.1rem;
+  border-left: 1px solid rgb(236 229 211 / 0.25);
+}
+.ledger div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.ledger dt {
+  font: italic 400 0.95rem var(--font-serif);
+  color: var(--on-board-soft);
+}
+.ledger dd {
+  margin: 0;
+  font: 700 1.5rem/1.1 var(--font-serif);
+  color: var(--mustard);
+  font-variant-numeric: lining-nums;
 }
 .title-page h1 {
   margin: 0;
@@ -391,8 +476,21 @@ code,
 }
 
 .empty {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0 2rem;
   font: italic 400 1.3rem var(--font-serif);
   color: var(--on-board-soft);
+}
+.empty p {
+  margin: 0;
+  max-width: 34rem;
+}
+.empty-nest {
+  flex: 0 0 auto;
+  width: 6.5rem;
+  color: var(--sage);
 }
 
 .toolbar {
@@ -603,6 +701,30 @@ code,
   background: repeating-linear-gradient(90deg, #e6ddc7 0 30%, #efe8d6 30% 100%);
   animation: breathe 1.4s ease-in-out infinite;
 }
+.ghost-drawer .sheet-ghost {
+  opacity: 1;
+  background: rgb(243 236 219 / 0.04);
+  box-shadow: none;
+  outline: 1.5px dashed rgb(236 229 211 / 0.3);
+  outline-offset: -1px;
+}
+.ghost-drawer .ghost-lines {
+  background: rgb(236 229 211 / 0.08);
+}
+.ghost-drawer .sheet-ghost .ghost-bar {
+  background: rgb(236 229 211 / 0.12);
+}
+.ghost-drawer .ghost-lines,
+.ghost-drawer .ghost-bar {
+  animation-delay: var(--delay, 0s);
+}
+.sheet-ghost .ghost-bar {
+  margin-top: 0.55rem;
+  background: #d9ceb4;
+}
+.sheet-ghost .ghost-bar-short {
+  width: 55%;
+}
 @keyframes breathe {
   50% {
     opacity: 0.55;
@@ -742,6 +864,28 @@ code,
 .detail::backdrop {
   background: rgb(12 18 15 / 0.75);
 }
+/* the sheet is lifted out of the drawer and set down in front of you */
+.detail[open] {
+  animation: lift-out 0.38s cubic-bezier(0.2, 1.1, 0.4, 1) both;
+}
+.detail[open]::backdrop {
+  animation: dim 0.3s ease both;
+}
+@keyframes lift-out {
+  from {
+    opacity: 0;
+    transform: translateY(22px) rotate(-1.4deg) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dim {
+  from {
+    opacity: 0;
+  }
+}
 .detail a {
   color: #7a3a20;
 }
@@ -750,7 +894,8 @@ code,
   top: 0.6rem;
   display: block;
   margin: 0.6rem 0.6rem -2.9rem auto;
-  min-height: 40px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0.3rem 0.9rem;
   border: 1.5px solid var(--ink);
   border-radius: 12px 4px 11px 5px / 5px 11px 4px 12px;
@@ -848,8 +993,32 @@ code,
   .wordmark-title {
     font-size: 2rem;
   }
-  .title-page svg {
+  .title-page {
+    gap: 0.9rem;
+  }
+  .title-egg {
+    width: 4rem;
+  }
+  .title-egg svg[role='img'] {
     width: 44px;
+    height: auto;
+  }
+  .title-nest {
+    width: 4rem;
+    margin-top: -1.2rem;
+  }
+  .ledger div {
+    padding: 0 0.55rem;
+  }
+  .ledger dt {
+    font-size: 0.85rem;
+  }
+  .ledger dd {
+    font-size: 1.3rem;
+  }
+  .empty {
+    flex-direction: column;
+    align-items: flex-start;
   }
   .sheet {
     transform: none;

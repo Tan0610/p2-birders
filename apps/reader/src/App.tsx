@@ -1,6 +1,7 @@
 import type { SightingRecord } from '@deccan-birders/format';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AddressForm, GATEWAYS, type Query, queryFromParams } from './components/AddressForm';
+import { BareNest, Feather } from './components/Doodles';
 import { EggMark } from './components/EggMark';
 import { Provenance } from './components/Provenance';
 import { SightingDetail } from './components/SightingDetail';
@@ -101,8 +102,11 @@ export function App() {
 
         {view?.kind === 'loading' && (
           <div className="loading" role="status" aria-live="polite">
-            <span className="loading-feather" aria-hidden="true" />
-            <p>{view.stage}</p>
+            <p className="loading-line">
+              <Feather className="loading-feather" />
+              {view.stage}
+            </p>
+            <GhostDrawer single={query?.kind === 'record'} />
           </div>
         )}
 
@@ -208,6 +212,32 @@ function Landing(props: { gateway: string; onGateway: (g: string) => void; onOpe
   );
 }
 
+/** The shape of a drawer about to be filled: a title page and a few pressed sheets, drawn in pencil. */
+function GhostDrawer({ single }: { single: boolean }) {
+  return (
+    <div className="ghost-drawer" aria-hidden="true">
+      {!single && (
+        <div className="ghost-title">
+          <span className="ghost-egg" />
+          <span className="ghost-bars">
+            <span />
+            <span />
+          </span>
+        </div>
+      )}
+      <ul className={single ? 'sheets sheets-single' : 'sheets'}>
+        {(single ? [0] : [0, 1, 2]).map((i) => (
+          <li key={i} className="sheet sheet-ghost" style={{ ['--tilt' as string]: `${(i - 1) * 0.8}deg`, ['--delay' as string]: `${i * 0.18}s` }}>
+            <div className="ghost-lines" />
+            <span className="ghost-bar" />
+            <span className="ghost-bar ghost-bar-short" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function JournalView(props: {
   gateway: string;
   view: Extract<View, { kind: 'journal' }>;
@@ -243,22 +273,42 @@ function JournalView(props: {
   const years = journal.entries.map((e) => Number(e.observedOn.slice(0, 4))).filter(Number.isFinite);
   const first = Math.min(...years);
   const last = Math.max(...years);
-  const span = years.length === 0 ? '' : first === last ? ` in ${first}` : ` from ${first} to ${last}`;
   const species = new Set(journal.entries.map((e) => e.commonName.trim().toLowerCase())).size;
 
   return (
     <section aria-labelledby="journal-title">
       <div className="title-page">
-        <EggMark address={journal.owner} />
+        <div className="title-egg">
+          <EggMark address={journal.owner} size={64} />
+          <BareNest className="title-nest" />
+        </div>
         <div>
           <h1 id="journal-title">
             {observers.size === 1 ? `${[...observers][0]}'s journal` : 'A Deccan Birders journal'}
           </h1>
           <p className="title-meta">
-            Edition {journal.sequence}, updated {new Date(journal.updatedAt).toLocaleDateString('en-IN', { dateStyle: 'long' })}.{' '}
-            {journal.entries.length === 1 ? 'One sighting' : `${journal.entries.length} sightings of ${species} species`}
-            {span}.
+            Updated {new Date(journal.updatedAt).toLocaleDateString('en-IN', { dateStyle: 'long' })}.
           </p>
+          <dl className="ledger">
+            <div>
+              <dt>Edition</dt>
+              <dd>{journal.sequence}</dd>
+            </div>
+            <div>
+              <dt>{journal.entries.length === 1 ? 'Sighting' : 'Sightings'}</dt>
+              <dd>{journal.entries.length}</dd>
+            </div>
+            <div>
+              <dt>Species</dt>
+              <dd>{species}</dd>
+            </div>
+            {years.length > 0 && (
+              <div>
+                <dt>{first === last ? 'Season' : 'Seasons'}</dt>
+                <dd>{first === last ? first : `${first}–${String(last).slice(-2)}`}</dd>
+              </div>
+            )}
+          </dl>
           {observers.size > 1 && <p className="title-meta">Seen by {listOf([...observers])}.</p>}
           <p className="title-address">
             <code className="ref">0x{journal.owner}</code>
@@ -273,7 +323,10 @@ function JournalView(props: {
       ))}
 
       {journal.entries.length === 0 ? (
-        <p className="empty">This edition lists no sightings. Nothing is hidden; there is simply nothing here yet.</p>
+        <div className="empty">
+          <BareNest className="empty-nest" />
+          <p>This edition lists no sightings. Nothing is hidden; there is simply nothing here yet.</p>
+        </div>
       ) : (
         <>
           <div className="toolbar">
@@ -295,7 +348,12 @@ function JournalView(props: {
             )}
           </div>
 
-          {records.length === 0 && <p className="empty">Nothing matches “{props.search}”.</p>}
+          {records.length === 0 && (
+            <div className="empty">
+              <BareNest className="empty-nest" />
+              <p>Nothing matches “{props.search}”. Try a bird, a place or a name.</p>
+            </div>
+          )}
 
           <ul className="sheets">
             {records.map(({ entry, result }, i) =>
